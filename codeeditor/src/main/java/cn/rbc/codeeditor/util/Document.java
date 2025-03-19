@@ -186,10 +186,11 @@ public class Document extends TextBuffer implements Parcelable {
 	 * No error checking is done on parameters.
 	 */
 	private void removeRowMetadata(int fromRow, int endOffset) {
-		while (fromRow < _rowTable.size() &&
-			   _rowTable.get(fromRow) <= endOffset) {
-			_rowTable.remove(fromRow);
-		}
+        int end = fromRow, size = _rowTable.size();
+		while (end < size &&
+			   _rowTable.get(end) <= endOffset)
+            end++;
+		_rowTable.subList(fromRow, end).clear();
 	}
 
 	private void adjustOffsetOfRowsFrom(int fromRow, int offset) {
@@ -330,7 +331,7 @@ public class Document extends TextBuffer implements Parcelable {
 		}
 
 		int startIndex = _rowTable.get(rowNumber);
-		return subSequence(startIndex, rowSize).toString();
+		return subSequence(startIndex, startIndex + rowSize).toString();
 	}
 
 	public int getRowSize(int rowNumber) {

@@ -83,7 +83,7 @@ public class TextEditor extends FreeScrollingTextField {
     }
 
     public String getSelectedText() {
-        return hDoc.subSequence(getSelectionStart(), getSelectionEnd() - getSelectionStart()).toString();
+        return hDoc.subSequence(getSelectionStart(), getSelectionEnd()).toString();
     }
 
     public void gotoLine(int line) {

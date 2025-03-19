@@ -136,7 +136,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 
 	private volatile int mVer = 0;
 
-	public void onChanged(CharSequence c, int start, boolean ins, boolean typ) {
+	public void onChanged(String c, int start, boolean ins, boolean typ) {
 		TextEditor editor = ed;
 		Document text = editor.getText();
 		boolean wordwrap = editor.isWordWrap();
@@ -164,7 +164,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 			}
 			range.enc = e - range.enc;
 		}
-		range.msg = (String)c;
+		range.msg = c;
 		changes.add(range);
 		Lsp lsp = Application.getInstance().lsp;
 		lsp.didChange(fl, ++mVer, changes);

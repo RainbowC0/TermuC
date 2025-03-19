@@ -24,7 +24,7 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
     private final Tokenizer _lexer = new Tokenizer(this);
     public boolean _isInSelectionMode = false;
     private boolean _isInSelectionMode2;
-	public boolean lexing;
+	public volatile boolean lexing;
     private FreeScrollingTextField field;
 	private List<Pair> mRes;
 
@@ -86,7 +86,7 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
                 if (pos > 0 ) {
 					int l = pos > 1 && ((c = fld.hDoc.charAt(pos - 2)) == 0xd83d || c == 0xd83c) ? 2 : 1;
                     pos -= l;
-					String s = (String)fld.hDoc.subSequence(pos,l);
+					String s = fld.hDoc.subSequence(pos, pos + l).toString();
                     fld.hDoc.deleteAt(pos, l, System.nanoTime());
                     fld.onDel(s, fld.mCaretPosition, l);
                     moveCaretLeft(true);
@@ -99,7 +99,7 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
                 int l = fld.hDoc.length();
                 if (pos < l) {
                     l = ((c=fld.hDoc.charAt(pos)) == 0xd83d || c == 0xd83c) ? 2 : 1;
-                    String s = (String)fld.hDoc.subSequence(pos, l);
+                    String s = fld.hDoc.subSequence(pos, pos + l).toString();
                     fld.hDoc.deleteAt(pos, l, System.nanoTime());
                     fld.onDel(s, pos, l);
                 }
@@ -496,7 +496,7 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
         if (_isInSelectionMode &&
 			fld.mSelectionAnchor < fld.mSelectionEdge) {
             CharSequence contents = fld.hDoc.subSequence(fld.mSelectionAnchor,
-														   fld.mSelectionEdge - fld.mSelectionAnchor);
+														   fld.mSelectionEdge);
             cb.setText(contents);
         }
     }
@@ -544,12 +544,12 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
 
         if (totalChars > 0) {
 			Document doc = fd.hDoc;
-            int originalRow = doc.findRowNumber(fd.mSelectionAnchor);
+            final int sela = fd.mSelectionAnchor;
+            int originalRow = doc.findRowNumber(sela);
             int originalOffset = doc.getRowOffset(originalRow);
             boolean isSingleRowSel = doc.findRowNumber(fd.mSelectionEdge) == originalRow;
-			CharSequence st = doc.subSequence(fd.mSelectionAnchor, totalChars);
             doc.deleteAt(fd.mSelectionAnchor, totalChars, System.nanoTime());
-            fd.onDel(st, fd.mCaretPosition, totalChars);
+            fd.onDel(doc.subSequence(sela, sela + totalChars), fd.mCaretPosition, totalChars);
             fd.mCaretPosition = fd.mSelectionAnchor;
             updateCaretRow();
             fd.setEdited(true);
@@ -779,9 +779,9 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
     String getTextAfterCursor(int maxLen) {
 		FreeScrollingTextField fld = field;
         int docLength = fld.hDoc.length();
-        if ((fld.mCaretPosition + maxLen) > (docLength - 1))
+        if ((maxLen += fld.mCaretPosition) > (docLength - 1))
 		//exclude the terminal EOF
-            return fld.hDoc.subSequence(fld.mCaretPosition, docLength - fld.mCaretPosition - 1).toString();
+            return fld.hDoc.subSequence(fld.mCaretPosition, docLength - 1).toString();
 
         return fld.hDoc.subSequence(fld.mCaretPosition, maxLen).toString();
     }
@@ -791,6 +791,6 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
         int start = fld.mCaretPosition - maxLen;
         if (start < 0)
             start = 0;
-        return fld.hDoc.subSequence(start, fld.mCaretPosition - start).toString();
+        return fld.hDoc.subSequence(start, fld.mCaretPosition).toString();
     }
 }//end inner controller class

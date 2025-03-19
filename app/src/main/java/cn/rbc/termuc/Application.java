@@ -54,7 +54,6 @@ public class Application extends android.app.Application {
     }
 
     void store(String key, Document obj) {
-        obj.setMetrics(null);
         ls.put(key, obj);
     }
 

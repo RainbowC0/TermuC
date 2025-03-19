@@ -83,7 +83,7 @@ public class UndoStack {
 				lastUndone = c;
 				if (lis != null) {
 					boolean b = c instanceof Delete;
-					lis.onChanged(c._data != null ? c._data : (b ? new String(_buf.gapSubSequence(c._length)) : _buf.subSequence(c._start, c._length)), c._start, b, false);
+					lis.onChanged(c._data != null ? c._data : (b ? new String(_buf.gapSubSequence(c._length)) : _buf.subSequence(c._start, c._start + c._length).toString()), c._start, b, false);
 				}
 				c.undo();
 				--_top;
@@ -272,7 +272,7 @@ public class UndoStack {
 		@Override
 		public void recordData() {
 			//TODO handle memory allocation failure
-			_data = (String)_buf.subSequence(_start, _length);
+			_data = _buf.subSequence(_start, _start + _length).toString();
 		}
 
 		@Override

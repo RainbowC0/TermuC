@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Vector;
 import java.util.stream.*;
 import cn.rbc.codeeditor.common.*;
+import android.text.*;
 
 
 //TODO Have all methods work with charOffsets and move all gap handling to logicalToRealIndex()
@@ -103,7 +104,7 @@ public class TextBuffer implements CharSequence
 			return new String();
 		int lineSize = getLineSize(lineNumber);
 
-		return subSequence(startIndex, lineSize).toString();
+		return subSequence(startIndex, startIndex + lineSize).toString();
 	}
 
 	/**
@@ -316,25 +317,55 @@ public class TextBuffer implements CharSequence
 	 *		non-positive.
 	 */
 	synchronized public CharSequence subSequence(int charOffset, int maxChars){
-		if (!isValid(charOffset) || maxChars <= 0)
-			return new String();
-		int totalChars = maxChars;
-		if ((charOffset + totalChars) > length())
-			totalChars = length() - charOffset;
-		int realIndex = logicalToRealIndex(charOffset);
-		char[] chars = new char[totalChars];
+		if (!isValid(charOffset) || maxChars <= charOffset)
+			return "";
 
-		for (int i = 0; i < totalChars; ++i){
-			chars[i] = _contents[realIndex];
-			++realIndex;
-			// skip the gap
-			if(realIndex == _gapStartIndex)
-				realIndex = _gapEndIndex;
-		}
-
-		return new String(chars);
+		return new SubBuffer(this, charOffset, maxChars);
 	}
 
+    private static class SubBuffer implements CharSequence {
+        TextBuffer buf;
+        int off, end;
+        public SubBuffer(TextBuffer buf, int offset, int end) {
+            this.buf = buf;
+            off = offset;
+            this.end = end;
+        }
+
+        @Override
+        public int length() {
+            return end - off;
+        }
+
+        @Override
+        public char charAt(int p1) {
+            if ((p1 += off) >= end || p1 < 0) throw new IndexOutOfBoundsException();
+            return buf.charAt(p1);
+        }
+
+        @Override
+        public CharSequence subSequence(int p1, int p2) {
+            if (p1 == off && p2 == end) return this;
+            return buf.subSequence(off+p1, off+p2);
+        }
+
+        public IntStream chars() { return null; }
+
+        public IntStream codePoints() { return null; }
+
+        @Override
+        public String toString() {
+            if (end <= off) return "";
+            final boolean flag = buf.charAt(end-1) == Language.EOF;
+            String s;
+            synchronized (this) {
+                if (flag) end--;
+                s = new StringBuilder(this).toString();
+                if (flag) end++;
+            }
+            return s;
+        }
+    }
 	/**
 	 * Gets charCount number of consecutive characters starting from _gapStartIndex.
 	 *
@@ -391,12 +422,6 @@ public class TextBuffer implements CharSequence
 		}
 
 		int insertIndex = logicalToRealIndex(charOffset);
-        /*if (_editPos + _editOff == charOffset) {
-            _editOff += c.length;
-        } else {
-            _editPos = charOffset;
-            _editOff = c.length;
-        }*/
         _editOff += c.length;
 
 		// shift gap to insertion point
@@ -432,7 +457,7 @@ public class TextBuffer implements CharSequence
 		if (undoable) {
 			_undoStack.captureDelete(charOffset, totalChars, timestamp);
 			if (_txLis != null) {
-				_txLis.onChanged(subSequence(charOffset, totalChars), charOffset, false, _typ);
+				_txLis.onChanged(subSequence(charOffset, charOffset + totalChars).toString(), charOffset, false, _typ);
 				_typ = false;
 			}
 		}
@@ -660,15 +685,7 @@ public class TextBuffer implements CharSequence
 
 	@Override
 	public String toString() {
-		int len=length();
-		StringBuffer buf=new StringBuffer();
-		for (int i=0; i < len;i++) {
-			char c=charAt(i);
-			if (c==Language.EOF)
-				break;
-			buf.append(c);
-		}
-		return buf.toString();
+		return subSequence(0, length()).toString();
 	}
 
 	public void setOnTextChangeListener(OnTextChangeListener txLis) {

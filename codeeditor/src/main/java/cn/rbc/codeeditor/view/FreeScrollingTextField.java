@@ -414,20 +414,27 @@ DialogInterface.OnDismissListener, Runnable {
 		chrAdvs.clear();
         mSpaceWidth = (int) mTextPaint.measureText(" ");
 		mAlphaWidth = getCharAdvance('a');
-        int dp = 0;
+        int y = 0;
 		if (hDoc.isWordWrap()) {
             int r = (int)((getScrollY()+cy)/oldHeight);
             int i = hDoc.getRowOffset(r);
             hDoc.analyzeWordWrap();
             i = hDoc.findRowNumber(i);
-            dp = rowHeight()*(i-r);
+            y = rowHeight()*(i-r);
         }
         mCtrlr.updateCaretRow();
 		mLineBrush.setStrokeWidth(mAlphaWidth * .15f);
-        float x = (getScrollX() + cx) * mAlphaWidth / oldWidth - cx;
-        float y = (getScrollY() + cy) * rowHeight() / oldHeight - cy;
+        int x = (int)((getScrollX() + cx) * mAlphaWidth / oldWidth - cx);
+        y += (getScrollY() + cy) * rowHeight() / oldHeight - cy;
         xExtent = 0;
-        scrollTo((int)x, dp + (int)y);
+        x = Math.max(0, Math.min(getMaxScrollX(), x));
+        y = Math.max(0, Math.min(getMaxScrollY(), y));
+        if (x != getScrollX() || y != getScrollY())
+            super.scrollTo(x, y);
+        else {
+            invalidate();
+        }
+        
         /*if (mSigHelpPanel.isShowing()) {
             int[] pos = SignatureHelpPanel.updatePosition(this);
             mSigHelpPanel.update(pos[0], pos[1]);
@@ -550,7 +557,7 @@ DialogInterface.OnDismissListener, Runnable {
 			// log("subSequence:"+hDoc.subSequence(curr, caretPosition - curr));
 			// if (isAutoCompeted) {
 			// Log.i("AutoCompete", text+" "+cursorPosition+" "+curr);
-                mAutoCompletePanel.update(hDoc.subSequence(curr, cursorPosition - curr));
+                mAutoCompletePanel.update(hDoc.subSequence(curr, cursorPosition));
 			// }
 			else
 				mAutoCompletePanel.dismiss();
