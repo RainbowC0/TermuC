@@ -21,18 +21,18 @@ TermuC is a simple C/C++ IDE backed on Termux. Based on [MrIkso/CodeEditor](//gi
 
 ## Technology
 
-This app use `com.termux.RUN_COMMAND` to call Termux to run command, and run `clangd` language server with `netcat`, which builds an insistant I/O channel, offering functions as diagnosing and compilation.
+This app uses `com.termux.RUN_COMMAND` to call Termux to run command, and run `clangd` language server with `netcat`, which builds an insistent I/O channel, offering functions as diagnosing and compilation.
 
 ## Features
 
-- [x] Highighting
+- [x] Highlighting
 - [x] Autocompletion
 - [x] Formatting
-- [x] Diagnose
+- [x] Diagnosing
 - [x] Compile flags
 - [x] Dark mode
-- [x] Debug
-- [x] Project manage
+- [x] Debugging
+- [x] Project management
 - [ ] Workspace
 
 ## Wiki
