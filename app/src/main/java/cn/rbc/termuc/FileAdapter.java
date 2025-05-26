@@ -48,13 +48,25 @@ public class FileAdapter extends BaseAdapter implements Comparator<File>, FileFi
 
 	@Override
 	public View getView(int pos, View convert, ViewGroup parent) {
-		if (convert == null)
+        ImageView img;
+        TextView txv;
+        ViewHolder vh;
+		if (convert == null) {
 			convert = mInflater.inflate(R.layout.file_item, parent, false);
-			//convert.setTag();
+		    img = convert.findViewById(R.id.file_icon);
+            txv = convert.findViewById(R.id.file_name);
+            vh = new ViewHolder();
+            vh.img = img;
+            vh.txv = txv;
+            convert.setTag(vh);
+        } else {
+            vh = (ViewHolder)convert.getTag();
+            img = vh.img;
+            txv = vh.txv;
+        }
 		FileItem fitm = getItem(pos);
-		int icon = fitm.icon;
-		((ImageView)convert.findViewById(R.id.file_icon)).setImageResource(icon);
-		((TextView)convert.findViewById(R.id.file_name)).setText(fitm.name);
+		img.setImageResource(fitm.icon);
+		txv.setText(fitm.name);
 		return convert;
 	}
 
@@ -101,4 +113,9 @@ public class FileAdapter extends BaseAdapter implements Comparator<File>, FileFi
 	public final static boolean isCpp(String name) {
 		return name.endsWith(".cpp") || name.endsWith(".cxx") || name.endsWith(".cc");
 	}
+
+    static class ViewHolder {
+        ImageView img;
+        TextView txv;
+    }
 }

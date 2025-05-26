@@ -23,6 +23,8 @@ public class TextEditor extends FreeScrollingTextField {
     private String _lastSelectFile;
     private int _index;
 	private Formatter mFormatter;
+    private OnEditedListener mEditedListener;
+    //private boolean mDirty;
 
     /*
      private Handler handler = new Handler() {
@@ -58,7 +60,6 @@ public class TextEditor extends FreeScrollingTextField {
     }
 
     private void init() {
-        setVerticalScrollBarEnabled(true);
         setTypeface(Typeface.MONOSPACE);
         setShowLineNumbers(true);
         setHighlightCurrentRow(true);
@@ -172,7 +173,7 @@ public class TextEditor extends FreeScrollingTextField {
     }
 
     public void replaceAll(CharSequence c) {
-        replaceText(0, getLength() - 1, c.toString());
+        replaceText(0, getLength() - 1, c);
     }
 
     public void setSelection(int index) {
@@ -189,7 +190,7 @@ public class TextEditor extends FreeScrollingTextField {
         if (newPosition >= 0) {
             //TODO editor.setEdited(false);
             // if reached original condition of file
-            setEdited(true);
+            setEdited(hDoc.getMarkedVersion() != hDoc.getCurrentVersion());
             mCtrlr.determineSpans();
 			//tc
             selectText(false);
@@ -201,7 +202,7 @@ public class TextEditor extends FreeScrollingTextField {
         int newPosition = hDoc.redo();
 
         if (newPosition >= 0) {
-            setEdited(true);
+            setEdited(hDoc.getMarkedVersion() != hDoc.getCurrentVersion());
             mCtrlr.determineSpans();
 			//tc
             selectText(false);
@@ -209,6 +210,17 @@ public class TextEditor extends FreeScrollingTextField {
         }
     }
 
+    @Override
+    public void setEdited(boolean set) {
+        isEdited = set;
+        if (mEditedListener!=null) {
+            mEditedListener.onEdited(set);
+        }
+    }
+
+    public void setOnEditedListener(OnEditedListener edlis) {
+        mEditedListener = edlis;
+    }
     /*
      public void open(String filename) {
      _lastSelectFile = filename;
@@ -229,5 +241,8 @@ public class TextEditor extends FreeScrollingTextField {
      WriteThread writeThread = new WriteThread(getText().toString(), file, handler);
      writeThread.start();
      }*/
+     interface OnEditedListener {
+         void onEdited(boolean edited);
+     }
 }
 

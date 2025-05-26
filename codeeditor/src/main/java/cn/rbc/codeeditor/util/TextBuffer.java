@@ -15,6 +15,7 @@ import java.util.Vector;
 import java.util.stream.*;
 import cn.rbc.codeeditor.common.*;
 import android.text.*;
+import java.io.*;
 
 
 //TODO Have all methods work with charOffsets and move all gap handling to logicalToRealIndex()
@@ -24,9 +25,9 @@ public class TextBuffer implements CharSequence
 	// gap size must be > 0 to insert into full buffers successfully
 	protected final static int MIN_GAP_SIZE = 50;
 	protected char[] _contents;
-	protected int _gapStartIndex;
+	public int _gapStartIndex;
 	/** One past end of gap */
-	protected int _gapEndIndex;
+	public int _gapEndIndex;
 	protected int _lineCount;
 	/** The number of times memory is allocated for the buffer */
 	private int _allocMultiplier;
@@ -35,8 +36,8 @@ public class TextBuffer implements CharSequence
 
 	/** Continuous seq of chars that have the same format (color, font, etc.) */
 	protected List<Pair> _spans;
+    protected int sgapIdx, sgapLen;
 	protected List<ErrSpan> _diag;
-    private int _editOff;
 	protected GapIntSet _marks;
 
 	OnTextChangeListener _txLis;
@@ -79,6 +80,7 @@ public class TextBuffer implements CharSequence
 		_lineCount = lineCount;
 		_allocMultiplier = 1;
 		_marks.clear();
+        _undoStack.reset();
 	}
 
 	synchronized public void setBuffer(char[] newBuffer){
@@ -89,7 +91,6 @@ public class TextBuffer implements CharSequence
 				lineCount++;
 		setBuffer(newBuffer,len,lineCount);
 	}
-
 
 	/**
 	 * Returns a string of text corresponding to the line with index lineNumber.
@@ -146,13 +147,6 @@ public class TextBuffer implements CharSequence
 		return null;
 	}
 
-    public void edit0() {
-        _editOff = 0;
-    }
-
-    public int editOff() {
-        return _editOff;
-    }
 	/*
 	 * Precondition: startOffset is the offset of startLine
 	 */
@@ -414,6 +408,7 @@ public class TextBuffer implements CharSequence
 	public synchronized void insert(char[] c, int start, int count, int charOffset, long timestamp,
 			boolean undoable){
 		if (undoable) {
+            if (mVer > _undoStack._top) mVer = -1;
 			_undoStack.captureInsert(charOffset, count, timestamp);
 			if (_txLis != null) {
 				_txLis.onChanged(new String(c, start, count), charOffset, true, _typ);
@@ -422,7 +417,7 @@ public class TextBuffer implements CharSequence
 		}
 
 		int insertIndex = logicalToRealIndex(charOffset);
-        _editOff += c.length;
+        //_editOff += c.length;
 
 		// shift gap to insertion point
 		if (insertIndex<_gapStartIndex)
@@ -455,6 +450,7 @@ public class TextBuffer implements CharSequence
 	public synchronized void delete(int charOffset, int totalChars, long timestamp,
 			boolean undoable){
 		if (undoable) {
+            if (mVer > _undoStack._top) mVer = -1;
 			_undoStack.captureDelete(charOffset, totalChars, timestamp);
 			if (_txLis != null) {
 				_txLis.onChanged(subSequence(charOffset, charOffset + totalChars).toString(), charOffset, false, _typ);
@@ -463,7 +459,7 @@ public class TextBuffer implements CharSequence
 		}
 
 		int newGapStart = charOffset + totalChars;
-        _editOff -= totalChars;
+        //_editOff -= totalChars;
 
 		// shift gap to deletion point
 		if (newGapStart != _gapStartIndex){
@@ -501,8 +497,6 @@ public class TextBuffer implements CharSequence
         if (lines != 0)
             _marks.shift(findLineNumber(_gapStartIndex)+1, lines);
         _lineCount += lines;
-        //_editPos = _gapStartIndex;
-        _editOff += displacement;
 		_gapStartIndex += displacement;
 		_cache.invalidateCache(realToLogicalIndex(_gapStartIndex - 1) + 1);
 	}
@@ -520,23 +514,47 @@ public class TextBuffer implements CharSequence
 	/**
 	 * Adjusts gap so that _gapStartIndex is at newGapStart
 	 */
-	final protected void shiftGapLeft(int newGapStart){
-		while(_gapStartIndex > newGapStart){
-			--_gapEndIndex;
-			--_gapStartIndex;
-			_contents[_gapEndIndex] = _contents[_gapStartIndex];
-		}
+	protected void shiftGapLeft(int newGapStart){
+        int i=0, r=_spans.size()-1, l;
+        while (i<r) {
+            l = (i+r) >> 1;
+            if (_spans.get(l).first >= newGapStart) {
+                r = l;
+            } else {
+                i = l+1;
+            }
+        }
+        Pair p;
+        l = _gapEndIndex - _gapStartIndex;
+        for (r=_spans.size();i<r && (p=_spans.get(i)).first < _gapStartIndex;i++) {
+            p.first += l;
+        }
+        System.arraycopy(_contents, newGapStart, _contents, newGapStart+l, _gapStartIndex - newGapStart);
+        _gapStartIndex = newGapStart;
+        _gapEndIndex = newGapStart + l;
 	}
 
 	/**
 	 * Adjusts gap so that _gapEndIndex is at newGapEnd
 	 */
-	final protected void shiftGapRight(int newGapEnd){
-		while(_gapEndIndex < newGapEnd){
-			_contents[_gapStartIndex] = _contents[_gapEndIndex];
-			++_gapStartIndex;
-			++_gapEndIndex;
-		}
+	protected void shiftGapRight(int newGapEnd){
+        int i=0, r=_spans.size()-1, m;
+        while (i<r) {
+            m = (i+r+1) >> 1;
+            if (_spans.get(m).first < newGapEnd) {
+                i = m;
+            } else {
+                r = m - 1;
+            }
+        }
+        newGapEnd -= _gapEndIndex;
+        Pair p;
+        for (i = _gapEndIndex - _gapStartIndex;r>=0 && (p=_spans.get(r)).first >= _gapEndIndex;r--) {
+            p.first -= i;
+        }
+        System.arraycopy(_contents, _gapEndIndex, _contents, _gapStartIndex, newGapEnd);
+        _gapStartIndex += newGapEnd;
+        _gapEndIndex += newGapEnd;
 	}
 
 	/**
@@ -545,13 +563,10 @@ public class TextBuffer implements CharSequence
 	 */
 	protected void initGap(int contentsLength){
 		int toPosition = _contents.length - 1;
-		_contents[toPosition--] = Language.EOF; // mark end of file
-		int fromPosition = contentsLength - 1;
-		while(fromPosition >= 0){
-			_contents[toPosition--] = _contents[fromPosition--];
-		}
+		_contents[toPosition] = Language.EOF; // mark end of file
+        System.arraycopy(_contents, 0, _contents, toPosition -= contentsLength, contentsLength);
 		_gapStartIndex = 0;
-		_gapEndIndex = toPosition + 1; // went one-past in the while loop
+		_gapEndIndex = toPosition; // went one-past in the while loop
 	}
 
 	public void setTyping(boolean tp) {
@@ -568,17 +583,9 @@ public class TextBuffer implements CharSequence
 		//TODO handle new size > MAX_INT or allocation failure
 		int increasedSize = minIncrement + MIN_GAP_SIZE * _allocMultiplier;
 		char[] temp = new char[_contents.length + increasedSize];
-		int i = 0;
-		while(i < _gapStartIndex){
-			temp[i] = _contents[i];
-			++i;
-		}
-
-		i = _gapEndIndex;
-		while(i < _contents.length){
-			temp[i + increasedSize] = _contents[i];
-			++i;
-		}
+        System.arraycopy(_contents, 0, temp, 0, _gapStartIndex);
+        System.arraycopy(_contents, _gapEndIndex, temp, _gapEndIndex + increasedSize,
+            _contents.length - _gapEndIndex);
 
 		_gapEndIndex += increasedSize;
 		_contents = temp;
@@ -606,11 +613,11 @@ public class TextBuffer implements CharSequence
 		return _gapEndIndex - _gapStartIndex;
 	}
 
-	final protected int logicalToRealIndex(int i){
+	final public int logicalToRealIndex(int i){
 		return i<_gapStartIndex ? i : i + gapSize();
 	}
 
-	final protected int realToLogicalIndex(int i){
+	final public int realToLogicalIndex(int i){
 		return i<_gapStartIndex ? i : i - gapSize();
 	}
 
@@ -624,6 +631,33 @@ public class TextBuffer implements CharSequence
 		return _spans;
 	}
 
+    public Pair getSpan(int i) {
+        return _spans.get(i < sgapIdx ? i : i + sgapLen);
+    }
+
+    private void invalidateSpans() {
+        _spans.subList(sgapIdx, sgapIdx+sgapLen).clear();
+        /*for (int i = sgapIdx, l = _spans.size(); i < l; i++) {
+            _spans.get(i).first -= editOff;
+        }*/
+    }
+
+    private int mVer;
+    public void markVersion() {
+        mVer = _undoStack._top;
+    }
+
+    public int getMarkedVersion() {
+        return mVer;
+    }
+
+    public int getCurrentVersion() {
+        return _undoStack._top;
+    }
+
+    public void resetUndos() {
+        _undoStack.reset();
+    }
 	/**
 	 * Sets the spans to use in the document.
 	 * Spans are continuous sequences of characters that have the same format
@@ -634,7 +668,6 @@ public class TextBuffer implements CharSequence
 	 */
 	public void setSpans(List<Pair> spans){
 		_spans = spans;
-        edit0();
 	}
 
 	public List<ErrSpan> getDiag(){

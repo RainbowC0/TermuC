@@ -46,7 +46,7 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 
 	@Override
 	public void handleMessage(Message msg) {
-        Lsp lsp = ma.getApp().lsp;
+        Lsp lsp = Application.getInstance().lsp;
 		switch (msg.what) {
 			case Lsp.INITIALIZE:
 				lsp.initialized();

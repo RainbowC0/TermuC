@@ -45,14 +45,14 @@ import cn.rbc.codeeditor.common.*;
  */
 public class UndoStack {
 	private TextBuffer _buf;
-	private LinkedList<Command> _stack = new LinkedList<Command>();
+	private LinkedList<Command> _stack = new LinkedList<>();
 	private boolean _isBatchEdit = false;
 	/** for grouping batch operations */
 	private int _groupId = 0;
 	/** where new entries should go */
-	private int _top = 0;
+	int _top = 0;
 	/** timestamp for the previous edit operation */
-	long _lastEditTime = -1;
+	long _lastEditTime = -1L;
 
 	public UndoStack(TextBuffer buf) {
 		_buf = buf;
@@ -208,6 +208,14 @@ public class UndoStack {
 		_isBatchEdit = false;
 		_groupId++;
 	}
+
+    void reset() {
+        _stack.clear();
+        _top = 0;
+        _groupId = 0;
+        _lastEditTime = -1L;
+        _isBatchEdit = false;
+    }
 
 	public abstract class Command{
 		public final static long MERGE_TIME = 1000000000; //750ms in nanoseconds

@@ -26,7 +26,7 @@ public class Utils {
         it.setClassName("com.termux", "com.termux.app.RunCommandService");
         it.setAction("com.termux.RUN_COMMAND");
         it.putExtra(PREFC.concat("PATH"), cmd);
-        it.putExtra(PREFC.concat("RUNNER"), "app-shell");
+       // it.putExtra(PREFC.concat("RUNNER"), "app-shell");
         it.putExtra(PREFC.concat("ARGUMENTS"), args);
         it.putExtra(PREFC.concat("WORKDIR"), pwd);
         it.putExtra(PREFC.concat("BACKGROUND"), background);

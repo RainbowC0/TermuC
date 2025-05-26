@@ -2,6 +2,8 @@ package cn.rbc.codeeditor.util;
 
 import java.io.*;
 import cn.rbc.codeeditor.lang.*;
+import android.view.*;
+import android.os.*;
 
 public class CharSeqReader extends Reader {
 	int offset = 0;

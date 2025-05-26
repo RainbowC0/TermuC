@@ -17,6 +17,7 @@ import android.util.TypedValue;
 import android.app.AlertDialog.Builder;
 import java.util.ArrayList;
 import java.util.List;
+import org.xmlpull.v1.*;
 
 public class EditFragment extends Fragment
 implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
@@ -48,7 +49,20 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
 	{
 		final MainActivity ma = (MainActivity)getActivity();
-		TextEditor editor = new TextEditor(ma);
+        if (ma.editAttr == null) {
+            XmlPullParser xml;
+            try {
+            xml = getResources().getLayout(R.layout.edit);
+            int i;
+            do {
+                i = xml.next();
+            } while(i != XmlPullParser.START_TAG);
+            ma.editAttr = android.util.Xml.asAttributeSet(xml);
+            } catch (Exception ioe) {
+                ioe.printStackTrace();
+            }
+        }
+		TextEditor editor = new TextEditor(ma, ma.editAttr); //TextEditor)View.inflate(ma, R.layout.edit, null);
 		ed = editor;
 		if ("d".equals(Application.theme)
           ||"s".equals(Application.theme)
@@ -63,8 +77,9 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 		editor.setUseSpace(Application.usespace);
 		editor.setTabSpaces(Application.tabsize);
         editor.setSuggestion(Application.suggestion);
-		editor.setLayoutParams(new FrameLayout.LayoutParams(
-								   FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+		editor.setLayoutParams(new ViewGroup.LayoutParams(
+								   ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        editor.setOnEditedListener(ma);
 		if (savedInstanceState!=null) {
 			String pth = (String)savedInstanceState.getCharSequence(FL);
             fl = new File(pth);
@@ -199,8 +214,10 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 	@Override
 	public void onClick(DialogInterface diag, int id) {
 		try {
-			String s = load().toString();
-			Application.getInstance().lsp.didChange(fl, 0, s);
+			Document cs = load();
+            ed.mCtrlr.determineSpans();
+            if ("s".equals(Application.completion))
+			    Application.getInstance().lsp.didChange(fl, 0, cs.toString());
 		} catch(IOException ioe) {
 			ioe.printStackTrace();
 		}
@@ -241,7 +258,9 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 
 	public void save() throws IOException {
         Writer writer = new FileWriter(fl);
-        Reader rd = new CharSeqReader(ed.getText());
+        Document doc = ed.getText();
+        doc.markVersion();
+        Reader rd = new CharSeqReader(doc);
         char[] buf = new char[1024];
         int i;
         while ((i=rd.read(buf)) > 0) {
@@ -250,6 +269,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
         rd.close();
         writer.close();
         lastModified = fl.lastModified();
+        ed.setEdited(doc.getMarkedVersion() != doc.getCurrentVersion());
     }
 
 	public Document load() throws IOException {
@@ -257,11 +277,17 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 		char[] buf = new char[1024];
         int i;
         Document doc = ed.getText();
+        StringBuilder sb = new StringBuilder();
         doc.delete(0, doc.length()-1, 0L, false);
 		while ((i=fr.read(buf))!=-1) {
-			doc.insert(buf, 0, i, doc.length()-1, 0L, false);
+            sb.append(buf, 0, i);
+			//doc.insert(buf, 0, i, doc.length()-1, 0L, false);
         }
 		fr.close();
+        doc.setText(sb);
+        doc.resetUndos();
+        doc.clearSpans();
+        doc.analyzeWordWrap();
 		if ((type&TYPE_MASK)!=TYPE_TXT && "s".equals(Application.completion))
 			doc.setOnTextChangeListener(this);
 		return doc;
@@ -278,9 +304,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 			_tp = TYPE_C;
 		else if (FileAdapter.isCpp(_it))
 			_tp = TYPE_CPP;
-		else if (_it.endsWith(".h"))
-			_tp = TYPE_C | TYPE_HEADER;
-		else if (_it.endsWith(".hpp"))
+		else if (_it.endsWith(".h") || _it.endsWith(".hpp"))
 			_tp = TYPE_CPP | TYPE_HEADER;
 		else if (!Utils.isBlob(pwd))
 			_tp = TYPE_TXT | TYPE_HEADER;

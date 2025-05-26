@@ -8,7 +8,7 @@
 	<TextView
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
-        android:textColor="?android:attr/textColorPrimary"
+		android:textColor="?android:attr/textColorPrimary"
 		android:text="@string/prj_name"/>
 
 	<EditText
@@ -19,7 +19,7 @@
 	<TextView
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
-        android:textColor="?android:attr/textColorPrimary"
+		android:textColor="?android:attr/textColorPrimary"
 		android:text="@string/template"/>
 
 	<Spinner

@@ -13,6 +13,7 @@ import cn.rbc.codeeditor.util.Tokenizer;
 import cn.rbc.codeeditor.util.TextWarriorException;
 
 import java.util.HashMap;
+
 import android.graphics.*;
 
 public abstract class ColorScheme {
@@ -48,9 +49,9 @@ public abstract class ColorScheme {
             case Tokenizer.KEYWORD:
                 element = Colorable.KEYWORD;
                 break;
-			case Tokenizer.TYPE:
-				element = Colorable.TYPE;
-				break;
+            case Tokenizer.TYPE:
+                element = Colorable.TYPE;
+                break;
             case Tokenizer.NAME:
                 element = Colorable.NAME;
                 break;
@@ -60,18 +61,18 @@ public abstract class ColorScheme {
                 break;
             case Tokenizer.SINGLE_SYMBOL_DELIMITED_A: //fall-through
             case Tokenizer.SINGLE_SYMBOL_DELIMITED_B:
-			case Tokenizer.KEYNAME:
+            case Tokenizer.KEYNAME:
                 element = Colorable.STRING;
                 break;
             case Tokenizer.NUMBER:
                 element = Colorable.NUMBER;
                 break;
-			case Tokenizer.NOTE:
-				element = Colorable.NOTE;
-				break;
-			case Tokenizer.OPERATOR:
-				element = Colorable.OPERATOR;
-				break;
+            case Tokenizer.NOTE:
+                element = Colorable.NOTE;
+                break;
+            case Tokenizer.OPERATOR:
+                element = Colorable.OPERATOR;
+                break;
             case Tokenizer.SINGLE_SYMBOL_LINE_A: //fall-through
             case Tokenizer.SINGLE_SYMBOL_WORD:
                 element = Colorable.SECONDARY;
@@ -124,5 +125,5 @@ public abstract class ColorScheme {
     private static final int WHITE = 0xFFFFFFE0;
     private static final int LIGHT_BLUE2 = 0xFF40B0FF;
 
-	static final int[] DIAG = {Color.RED, Color.MAGENTA, 0xFF00BB00, Color.GRAY};
+    static final int[] DIAG = {Color.RED, Color.MAGENTA, 0xFF00BB00, Color.CYAN};
 }

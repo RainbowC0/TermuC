@@ -5,6 +5,7 @@
 package cn.rbc.codeeditor.lang.c;
 
 import cn.rbc.codeeditor.util.Lexer;
+import cn.rbc.codeeditor.util.*;
 
 
 @SuppressWarnings("fallthrough")
@@ -1028,7 +1029,11 @@ public class CLexer implements Lexer {
 		return true;
 	}
 
-
+    private TextBuffer zzBuf;
+    
+    public void setDoc(TextBuffer buf) {
+        zzBuf = buf;
+    }
 	/**
 	 * Closes the input reader.
 	 *

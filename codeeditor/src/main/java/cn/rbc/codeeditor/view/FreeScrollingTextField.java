@@ -66,6 +66,7 @@ import cn.rbc.codeeditor.view.ColorScheme.Colorable;
 import java.util.*;
 import java.util.stream.*;
 import android.widget.*;
+import android.graphics.*;
 
 /**
  * A custom text view that uses a solid shaded caret (aka cursor) instead of a
@@ -426,15 +427,15 @@ DialogInterface.OnDismissListener, Runnable {
 		mLineBrush.setStrokeWidth(mAlphaWidth * .15f);
         int x = (int)((getScrollX() + cx) * mAlphaWidth / oldWidth - cx);
         y += (getScrollY() + cy) * rowHeight() / oldHeight - cy;
-        xExtent = 0;
+       // xExtent = 0;
         x = Math.max(0, Math.min(getMaxScrollX(), x));
         y = Math.max(0, Math.min(getMaxScrollY(), y));
         if (x != getScrollX() || y != getScrollY())
             super.scrollTo(x, y);
         else {
-            invalidate();
+            postInvalidate();
         }
-        
+        xExtent = 0;
         /*if (mSigHelpPanel.isShowing()) {
             int[] pos = SignatureHelpPanel.updatePosition(this);
             mSigHelpPanel.update(pos[0], pos[1]);
@@ -443,7 +444,7 @@ DialogInterface.OnDismissListener, Runnable {
 		return true;
     }
 
-    public void replaceText(int from, int charCount, String text) {
+    public void replaceText(int from, int charCount, CharSequence text) {
         mCtrlr.replaceText(from, charCount, text);
         mCtrlr.stopTextComposing();
     }
@@ -768,26 +769,18 @@ DialogInterface.OnDismissListener, Runnable {
         mNavMethod.onTextDrawComplete(canvas);
     }
 
-    //protected int editOff = 0;
-    //private int sidx = 0, lidx = 0;
-    //private float estp = Float.MAX_VALUE;
-    /*private final int addr(int x) {
-        int i=x+hDoc.editOff();
-        if (i>=mCaretPosition)
-            return i;
-        return x;
-    }*/
-
     private void realDraw(Canvas canvas) {
         int currRowNum = getBeginPaintRow(canvas);
         int currIndex = hDoc.getRowOffset(currRowNum);
 
-        if (currIndex < 0)
+        if (currIndex < 0) {
             return;
+        }
         int currLineNum = 1 + (isWordWrap() ? hDoc.findLineNumber(currIndex) : currRowNum);
         int lastLineNum = 0;
         mLeftOffset = isShowLineNumbers ? (int) mTextPaint.measureText("  " + hDoc.getLineCount()) : 0;
-
+        //mTextPaint.setColor(Color.MAGENTA);
+        //canvas.drawText( hDoc.rows(), getScrollX(), getScrollY()+rowHeight(), mTextPaint);
         int paintX = 0;
         int paintY = getPaintBaseline(currRowNum);
         //----------------------------------------------
@@ -805,7 +798,7 @@ DialogInterface.OnDismissListener, Runnable {
             spanIndex = 0; r = spanSize-1;*/
 		while (spanIndex < r) {
 			m = (spanIndex + r + 1) >> 1;
-			if (spans.get(m).first <= currIndex)
+			if (hDoc.realToLogicalIndex(spans.get(m).first) <= currIndex)
 				spanIndex = m;
 			else
 				r = m - 1;
@@ -870,8 +863,8 @@ DialogInterface.OnDismissListener, Runnable {
 			mI = ~mI;
 		// row by row
 		int rowEnd = 0;
-        int endRowNum = Math.min(hDoc.getRowCount(), getEndPaintRow(canvas));
-        for (m = -1; currRowNum <= endRowNum && currIndex < mL; currRowNum++) {
+        int endRowNum = Math.min(hDoc.getRowCount(), 1+getEndPaintRow(canvas));
+        for (m = -1; currRowNum < endRowNum && currIndex < mL; currRowNum++) {
 			if (currLineNum != lastLineNum) {
 				if (showLN) {
                     ColorScheme.Colorable ca;
@@ -910,13 +903,13 @@ DialogInterface.OnDismissListener, Runnable {
             r = paintX;
             byte currState = -1; // invalid initial state
             int drawStart = currIndex, tp = currSpan.second;
-            for (rowEnd += hDoc.getRowSize(currRowNum); i < rowEnd; i++,currIndex++) {
+            for (rowEnd += hDoc.getRowSize(currRowNum); i <= rowEnd && currIndex<mL; i++,currIndex++) {
                 // calculate new state
                 byte newState = 0;
                 if (mCtrlr.inSelectionRange(currIndex))
                     newState |= 4;
                 // test state change
-                boolean reachSpanEnd = nextSpan != null && currIndex >= nextSpan.first;
+                boolean reachSpanEnd = nextSpan != null && currIndex >= hDoc.realToLogicalIndex(nextSpan.first);
                 tp = currSpan.second;
                 if (reachSpanEnd) {
                     currSpan = nextSpan;
@@ -943,7 +936,11 @@ DialogInterface.OnDismissListener, Runnable {
                             diag = diagList.get(idx++);
                     }
                 }
-                if (newState != currState || reachSpanEnd && (newState&4)==0 || i+1==rowEnd) {
+                //DLog.i("Lsp", i+","+c+","+rowEnd);
+                if (newState != currState
+                        || reachSpanEnd && (newState&4)==0
+                        || i==rowEnd
+                        || currIndex+1 == mL) {
                     // draw the last text
                     if (drawStart < currIndex) {
                        if (r >= getScrollX() && paintX < width) {
@@ -961,27 +958,35 @@ DialogInterface.OnDismissListener, Runnable {
                     drawStart = currIndex;
                     currState = newState;
                 }
-                if (currIndex == mCaretPosition && isCursorVisiable)
+               // if (i==rowEnd) break;
+                if (currIndex == mCaretPosition && i<rowEnd && isCursorVisiable)
                 //draw cursor
                     drawCaret(canvas, r, paintY);
                 //else if (currIndex + 1 == mCaretPosition)
                 //    mCaretSpan = currSpan;
-                
+                /*if (i<rowEnd&& currIndex == hDoc._gapStartIndex) {
+                    mTextPaint.setColor(0xffff0000);
+                    canvas.drawLine(r, paintY, r, paintY-rowheight, mTextPaint);
+                    canvas.drawText(""+currIndex, r, paintY, mTextPaint);
+                }*/
                 r += getAdvance(c, r);
             }
-            char c = hDoc.charAt(--currIndex);
-            if ((buf[0]=mapSpace(c)) == Language.GLYPH_NEWLINE) {
+            if (currIndex > 1 && hDoc.charAt(currIndex-2) == Language.NEWLINE) {
 				while (idx < diagLen && diag.enl == currLineNum)
 					diag = diagList.get(idx++);
 				++currLineNum;
 				rowEnd = 0;
 				m = -1;
-                byte b = 2;
-                if (mCtrlr.inSelectionRange(currIndex))
-                    b |= 4;
-                drawTextBlock(canvas, currIndex, 1+currIndex, 0, r-getEOLAdvance(), paintY, r, b);
+                //byte b = 2;
+                //if (mCtrlr.inSelectionRange(currIndex))
+                //    b |= 4;
+                //drawTextBlock(canvas, currIndex, 1+currIndex, 0, r-getEOLAdvance(), paintY, r, b);
 			}
-            currIndex++;
+            /*if (c!=Language.EOF) {
+                mTextPaint.setColor(mColorScheme.getColor(Colorable.NON_PRINTING_GLYPH));
+                canvas.drawText("" + hDoc.getRowOffset(currRowNum + 1), r, paintY, mTextPaint);
+            }*/
+            currIndex--;
             paintY += rowheight;
             paintX = r;
 
@@ -1202,6 +1207,8 @@ DialogInterface.OnDismissListener, Runnable {
 
     public int getCharAdvance(char c) {
 		int advance;
+        if ('\u4E00'<=c&&c<='\u9FFF')
+            c = '\u4E00'; // chinese characters are mono-space
 		if ((advance = chrAdvs.get(c, -1)) == -1) {
 			buf[0] = c;
 			advance = (int) mTextPaint.measureText(buf, 0, 1);
@@ -1396,7 +1403,7 @@ DialogInterface.OnDismissListener, Runnable {
         int left = mLeftOffset;
         int right = mLeftOffset;
         boolean isEmoji = false;
-        String rowText = hDoc.getRow(row);
+        CharSequence rowText = hDoc.getRow(row);
         int i = 0;
 
         int len = rowText.length();
@@ -1490,7 +1497,7 @@ DialogInterface.OnDismissListener, Runnable {
     int coordToCharIndex(int x, int y) {
         int row = y / rowHeight();
         if (row > hDoc.getRowCount())
-            return hDoc.length() - 1;
+            return hDoc.length()-1;
 
         int charIndex = hDoc.getRowOffset(row);
         if (charIndex < 0)
@@ -1500,7 +1507,7 @@ DialogInterface.OnDismissListener, Runnable {
         if (x < 0)
             return charIndex; // coordinate is outside, to the left of view
 
-        String rowText = hDoc.getRow(row);
+        CharSequence rowText = hDoc.getRow(row);
 
         int extent = mLeftOffset;
         int i = 0;
@@ -1568,7 +1575,7 @@ DialogInterface.OnDismissListener, Runnable {
             return -1;
         }
 
-        String rowText = hDoc.getRow(row);
+        CharSequence rowText = hDoc.getRow(row);
 
         int extent = 0;
         int i = 0;
@@ -1641,13 +1648,8 @@ DialogInterface.OnDismissListener, Runnable {
     }
 
     @Override
-    protected int computeVerticalScrollOffset() {
-        return getScrollY();
-    }
-
-    @Override
     protected int computeVerticalScrollRange() {
-        return hDoc.getRowCount() * rowHeight() + getPaddingTop() + getPaddingBottom();
+        return getHeight() + getMaxScrollY();
     }
 
     @Override

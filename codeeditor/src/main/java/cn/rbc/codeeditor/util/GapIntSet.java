@@ -28,7 +28,22 @@ public class GapIntSet {
 		}
 	}
 
+	/**
+	 * Toggle the int in mData
+	 * @param l the target int
+	 */
 	public void toggle(int l) {
+		int idx = set(l);
+		if (idx >= 0)
+			remove(idx);
+	}
+
+	/**
+	 * Try to add an int to mData
+	 * @param l the target int
+	 * @return the index of int l if already exists, or its one's complement after added
+	 */
+	public int set(int l) {
 		if (l>=gapSt+gapSz)
 			l -= gapSz;
 		else if (l>=gapSt) {
@@ -38,8 +53,7 @@ public class GapIntSet {
 		int idx = Arrays.binarySearch(mData, 0, size, l);
 		if (idx<0)
 			add(~idx, l);
-		else
-			remove(idx);
+		return idx;
 	}
 
 	private void add(int i, int l) {

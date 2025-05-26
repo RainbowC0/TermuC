@@ -41,13 +41,12 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
      * Does nothing if the Lexer language is not a programming language
      */
     public void determineSpans() {
-		lexing = true;
+		//lexing = true;
 		_lexer.tokenize(field.hDoc);
     }
 
     public void cancelSpanning() {
 		lexing = false;
-        field.hDoc.edit0();
         _lexer.cancelTokenize();
     }
 
@@ -71,7 +70,7 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
     //TODO minimise invalidate calls from moveCaret(), insertion/deletion and word wrap
     public void onPrintableChar(char c) {
         // delete currently selected text, if any
-		lexing = true;
+		//lexing = true;
         boolean selectionDeleted = false;
         if (_isInSelectionMode) {
             selectionDelete();
@@ -86,7 +85,7 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
                 if (pos > 0 ) {
 					int l = pos > 1 && ((c = fld.hDoc.charAt(pos - 2)) == 0xd83d || c == 0xd83c) ? 2 : 1;
                     pos -= l;
-					String s = fld.hDoc.subSequence(pos, pos + l).toString();
+					CharSequence s = fld.hDoc.subSequence(pos, pos + l);
                     fld.hDoc.deleteAt(pos, l, System.nanoTime());
                     fld.onDel(s, fld.mCaretPosition, l);
                     moveCaretLeft(true);
@@ -99,7 +98,7 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
                 int l = fld.hDoc.length();
                 if (pos < l) {
                     l = ((c=fld.hDoc.charAt(pos)) == 0xd83d || c == 0xd83c) ? 2 : 1;
-                    String s = fld.hDoc.subSequence(pos, pos + l).toString();
+                    CharSequence s = fld.hDoc.subSequence(pos, pos + l);
                     fld.hDoc.deleteAt(pos, l, System.nanoTime());
                     fld.onDel(s, pos, l);
                 }
@@ -491,12 +490,13 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
      * Does nothing if not in select mode.
      */
     public void copy(ClipboardManager cb) {
-        //TODO catch OutOfMemoryError
+        // the max limitation is 4096
 		FreeScrollingTextField fld = field;
         if (_isInSelectionMode &&
 			fld.mSelectionAnchor < fld.mSelectionEdge) {
+            final int l = Math.min(fld.mSelectionAnchor+1024*1024, fld.mSelectionEdge);
             CharSequence contents = fld.hDoc.subSequence(fld.mSelectionAnchor,
-														   fld.mSelectionEdge);
+														 l);
             cb.setText(contents);
         }
     }
@@ -779,9 +779,9 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
     String getTextAfterCursor(int maxLen) {
 		FreeScrollingTextField fld = field;
         int docLength = fld.hDoc.length();
-        if ((maxLen += fld.mCaretPosition) > (docLength - 1))
+        if ((maxLen += fld.mCaretPosition) > docLength)
 		//exclude the terminal EOF
-            return fld.hDoc.subSequence(fld.mCaretPosition, docLength - 1).toString();
+            maxLen = docLength; //-1
 
         return fld.hDoc.subSequence(fld.mCaretPosition, maxLen).toString();
     }

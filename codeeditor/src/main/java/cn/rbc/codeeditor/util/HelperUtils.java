@@ -42,4 +42,31 @@ public class HelperUtils {
         if (t != null)
             t.show();
 	}
+/*
+    public static int codePointAt(CharSequence seq, int pos, int limit) {
+        // 1. 参数校验
+        if (pos < 0 || pos >= limit || limit > seq.length()) {
+            throw new IndexOutOfBoundsException(
+                "pos=" + pos + ", limit=" + limit + ", length=" + seq.length()
+            );
+        }
+
+        // 2. 获取当前字符
+        char high = seq.charAt(pos);
+
+        // 3. 检查是否为高代理项（High Surrogate）
+        if (Character.isHighSurrogate(high)) {
+            // 检查下一个字符是否在有效范围内
+            if (pos + 1 < limit) {
+                char low = seq.charAt(pos + 1);
+                if (Character.isLowSurrogate(low)) {
+                    // 4. 合法代理对：返回组合后的代码点
+                    return Character.toCodePoint(high, low);
+                }
+            }
+        }
+
+        // 5. 单字符或无效代理：返回原始值
+        return high;
+    }*/
 }

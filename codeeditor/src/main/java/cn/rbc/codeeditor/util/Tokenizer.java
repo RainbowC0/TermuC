@@ -130,14 +130,11 @@ public class Tokenizer {
         _hDoc = hDoc;
     }
 
-    
-
     public interface LexCallback {
         public void lexDone(List<Pair> results);
     }
 
     private class LexThread extends Thread {
-        //private final Tokenizer _lexManager;
         /**
          * can be set by another thread to stop the scan immediately
          */
@@ -150,7 +147,6 @@ public class Tokenizer {
         private ArrayList<Pair> _tokens;
 
         public LexThread() {
-           // _lexManager = p;
             _abort = new Flag();
         }
 
@@ -160,7 +156,6 @@ public class Tokenizer {
                 rescan = false;
                 _abort.clear();
                 tokenize();
-				//_tokens = Lexer.getLanguage().getTokenizer().tokenize(getDocument(), _abort);
             } while (rescan);
 
             if (!_abort.isSet())
@@ -181,12 +176,8 @@ public class Tokenizer {
          * Scans the document referenced by _lexManager for tokens.
          * The result is stored internally.
          */
-        public void tokenize() {
+        private void tokenize() {
 			Language language = Tokenizer.getLanguage();
-			if (!language.isProgLang()) {
-				_tokens = new ArrayList<>();
-				return;
-			}
 			ArrayList<Pair> tokens = new ArrayList<>();
 			Lexer lexer=language.newLexer(new CharSeqReader(_hDoc));
 			int type=-1, ltype=-1, ttype=-1, ltp=-1;
@@ -251,7 +242,7 @@ public class Tokenizer {
                                 ltype = NORMAL;
 						}
                         if (ltype != ttype) {
-                            tokens.add(new Pair(idx, ltype));
+                            tokens.add(new Pair(_hDoc.logicalToRealIndex(idx), ltype));
                             ttype = ltype;
                         }
                         ltp = type;
