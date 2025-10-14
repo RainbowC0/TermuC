@@ -1,17 +1,12 @@
 package cn.rbc.codeeditor.view;
 
-import android.text.InputType;
-import android.view.KeyEvent;
-import android.view.inputmethod.BaseInputConnection;
-
-import cn.rbc.codeeditor.lang.Language;
-import cn.rbc.codeeditor.util.DLog;
-import cn.rbc.codeeditor.util.Tokenizer;
+import android.text.*;
+import android.view.*;
+import android.view.inputmethod.*;
+import cn.rbc.codeeditor.lang.*;
+import cn.rbc.codeeditor.util.*;
 
 import static cn.rbc.codeeditor.util.DLog.log;
-import cn.rbc.codeeditor.util.*;
-import android.widget.*;
-import android.os.*;
 
 //*********************************************************************
 //************************** InputConnection **************************

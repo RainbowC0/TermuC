@@ -1,23 +1,23 @@
 package cn.rbc.termuc;
-import android.net.Uri;
 import android.content.*;
-import java.net.*;
-import java.io.*;
-import org.json.JSONObject;
-import java.util.*;
-import android.util.Log;
-import java.nio.charset.StandardCharsets;
+import android.net.*;
 import android.os.*;
+import android.util.*;
 import cn.rbc.codeeditor.util.*;
-import android.util.JsonReader;
+import java.io.*;
+import java.net.*;
+import java.nio.charset.*;
+import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.locks.*;
+import org.json.*;
 
-public class Lsp extends ReentrantLock implements Runnable {
+import cn.rbc.codeeditor.util.Range;
+
+public class Lsp extends Semaphore implements Runnable {
 	final static int INITIALIZE = 0, INITIALIZED = 1,
 	OPEN = 2, CLOSE = 3,
 	COMPLETION = 4, FIX = 5, CHANGE = 6, SAVE = 7, NOTI = 8, SIGN_HELP = 9,
-	ERROR = -1, UNLOCK = -2;
+	ERROR = -1;
 	private final static String TAG = "LSP";
 	private final static byte[] CONTENTLEN = "Content-Length: ".getBytes(StandardCharsets.UTF_8);
 	private int tp;
@@ -27,16 +27,22 @@ public class Lsp extends ReentrantLock implements Runnable {
 	private long mLastReceivedTime;
 	private Handler mRead;
 
+    public Lsp() {
+        super(0);
+    }
+
 	// In main thread
 	public void start(Context mC, Handler read) {
 		Utils.run(mC, "/system/bin/nc", new String[]{"-l", "-s", Application.lsp_host, "-p", Integer.toString(Application.lsp_port), "-w", "6", "nice", "-n", "-20", "clangd", "--header-insertion-decorators=0"}, Utils.ROOT.getAbsolutePath(), true);
 		mRead = read;
-		lock();
 		new Thread(this).start();
 		mExecutor.execute(new Runnable(){
 			public void run() {
-			    lock();
-				unlock();
+                try {
+			        acquire();
+                } catch (InterruptedException ie) {
+                    ie.printStackTrace();
+                }
 			}
 		});
 	}
@@ -66,7 +72,7 @@ public class Lsp extends ReentrantLock implements Runnable {
 				}
 				i++;
 			} while (i<=20 && isEnded());
-			mRead.sendEmptyMessage(UNLOCK);
+			release();
 			if (i>20)
 				throw new IOException("Connection failed");
 			InputStream is = sk.getInputStream();

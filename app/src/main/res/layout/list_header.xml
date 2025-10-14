@@ -19,6 +19,7 @@
 			android:id="@+id/pwd"
 			android:singleLine="true"
 			android:ellipsize="start"
+            android:maxLines="1"
 			android:layout_weight="1.0"
 			android:textAppearance="?android:attr/textAppearanceMedium"
 			android:textColor="?android:attr/textColorPrimary"/>

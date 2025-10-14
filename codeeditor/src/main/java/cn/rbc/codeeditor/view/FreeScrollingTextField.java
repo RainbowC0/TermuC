@@ -31,42 +31,23 @@
  */
 package cn.rbc.codeeditor.view;
 
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnDismissListener;
-import android.content.res.Resources;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Rect;
-import android.graphics.RectF;
-import android.graphics.Typeface;
-import android.text.ClipboardManager;
-import android.text.InputType;
-import android.text.Selection;
-import android.text.SpannableStringBuilder;
-import android.text.method.CharacterPickerDialog;
-import android.util.SparseArray;
-import android.util.SparseIntArray;
-import android.util.AttributeSet;
-import android.util.TypedValue;
-import android.view.*;
-import android.view.animation.AnimationUtils;
-import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputConnection;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.EdgeEffect;
-import android.widget.OverScroller;
-
-import cn.rbc.codeeditor.common.*;
-import cn.rbc.codeeditor.lang.Language;
-import cn.rbc.codeeditor.util.*;
-import cn.rbc.codeeditor.view.autocomplete.AutoCompletePanel;
-import cn.rbc.codeeditor.view.ColorScheme.Colorable;
-
-import java.util.*;
-import java.util.stream.*;
-import android.widget.*;
+import android.content.*;
 import android.graphics.*;
+import android.text.*;
+import android.text.method.*;
+import android.util.*;
+import android.view.*;
+import android.view.inputmethod.*;
+import android.widget.*;
+import cn.rbc.codeeditor.common.*;
+import cn.rbc.codeeditor.lang.*;
+import cn.rbc.codeeditor.util.*;
+import cn.rbc.codeeditor.view.ColorScheme.*;
+import cn.rbc.codeeditor.view.autocomplete.*;
+import java.util.*;
+
+import android.content.ClipboardManager;
+import cn.rbc.codeeditor.util.Pair;
 
 /**
  * A custom text view that uses a solid shaded caret (aka cursor) instead of a
@@ -245,7 +226,7 @@ DialogInterface.OnDismissListener, Runnable {
 	private int mSizeMax, mSizeMin;
     private boolean isAutoCompeted = true; //代码提示
     private boolean isShowLineNumbers = true;
-    private boolean isCursorVisiable = true;
+    private boolean isCursorVisible = true;
     private boolean isLayout = false;
     private boolean isTextChanged = false;
     private boolean isCaretScrolled = false;
@@ -342,8 +323,8 @@ DialogInterface.OnDismissListener, Runnable {
         return mCaretX;
     }
 
-    public void setCursorVisiable(boolean isCursorVidiable) {
-        isCursorVisiable = isCursorVidiable;
+    public void setCursorVisiable(boolean isCursorVisible) {
+        this.isCursorVisible = isCursorVisible;
     }
 
     public boolean isShowLineNumbers() {
@@ -779,8 +760,6 @@ DialogInterface.OnDismissListener, Runnable {
         int currLineNum = 1 + (isWordWrap() ? hDoc.findLineNumber(currIndex) : currRowNum);
         int lastLineNum = 0;
         mLeftOffset = isShowLineNumbers ? (int) mTextPaint.measureText("  " + hDoc.getLineCount()) : 0;
-        //mTextPaint.setColor(Color.MAGENTA);
-        //canvas.drawText( hDoc.rows(), getScrollX(), getScrollY()+rowHeight(), mTextPaint);
         int paintX = 0;
         int paintY = getPaintBaseline(currRowNum);
         //----------------------------------------------
@@ -959,7 +938,7 @@ DialogInterface.OnDismissListener, Runnable {
                     currState = newState;
                 }
                // if (i==rowEnd) break;
-                if (currIndex == mCaretPosition && i<rowEnd && isCursorVisiable)
+                if (currIndex == mCaretPosition && i<rowEnd && isCursorVisible)
                 //draw cursor
                     drawCaret(canvas, r, paintY);
                 //else if (currIndex + 1 == mCaretPosition)
@@ -2287,13 +2266,12 @@ DialogInterface.OnDismissListener, Runnable {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (isFocused())
-            mNavMethod.onTouchEvent(event);
-        else if ((event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP
+        if ((event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP
                  && isPointInView((int) event.getX(), (int) event.getY()))
         // somehow, the framework does not automatically change the focus
         // to this view when it is touched
             requestFocus();
+        mNavMethod.onTouchEvent(event);
         return true;
     }
 
@@ -2301,26 +2279,43 @@ DialogInterface.OnDismissListener, Runnable {
 	public boolean onGenericMotionEvent(MotionEvent event) {
 		if (event.isFromSource(InputDevice.SOURCE_CLASS_POINTER) && event.getAction() == MotionEvent.ACTION_SCROLL) {
 			// if (!isDragging)
-			final float vscroll = event.getAxisValue(MotionEvent.AXIS_VSCROLL);
-			if (vscroll != 0) {
-				if ((event.getMetaState() & KeyEvent.META_CTRL_ON) != 0
-					&& setTextSize((int)(getTextSize() + vscroll * HelperUtils.getDpi(mContext)))) {
-					return true;
-				} else {
-					final int delta = (int) (vscroll * rowHeight());
-					final int range = getMaxScrollY();
-					int oldScrollY = getScrollY();
-					int newScrollY = oldScrollY - delta;
-					if (newScrollY < 0) {
-						newScrollY = 0;
-					} else if (newScrollY > range) {
-						newScrollY = range;
-					}
-					if (newScrollY != oldScrollY) {
-						super.scrollTo(getScrollX(), newScrollY);
-						return true;
-					}
-				}
+			float vscroll = event.getAxisValue(MotionEvent.AXIS_VSCROLL);
+            float hscroll = event.getAxisValue(MotionEvent.AXIS_HSCROLL);
+            if (vscroll == 0f && hscroll == 0f) {
+                return super.onGenericMotionEvent(event);
+            }
+            int metaState = event.getMetaState();
+            // Horizontal scrolling condition convertion
+            if (Math.abs(hscroll) > Math.abs(vscroll)) {
+                metaState |= KeyEvent.META_SHIFT_ON;
+            } else {
+                hscroll = vscroll;
+            }
+            final int scrollFactor = 3 * rowHeight();
+            // Text font size zoom
+            if ((metaState & KeyEvent.META_CTRL_ON) != 0) {
+                return setTextSize((int)(getTextSize() + hscroll * HelperUtils.getDpi(mContext)));
+            }
+            final int oldScrollX = getScrollX();
+            final int oldScrollY = getScrollY();
+            // Horizontal scrolling
+            if ((metaState & KeyEvent.META_SHIFT_ON) != 0) {
+                hscroll *= scrollFactor;
+                int newScroll = oldScrollX - (int)hscroll;
+                newScroll = Math.max(Math.min(newScroll, getMaxScrollX()), 0);
+                if (newScroll != oldScrollX) {
+                    super.scrollTo(newScroll, oldScrollY);
+                    return true;
+                }
+            // Regular scrolling
+            } else {
+                vscroll *= scrollFactor;
+                int newScroll = oldScrollY - (int)vscroll;
+                newScroll = Math.max(Math.min(newScroll, getMaxScrollY()), 0);
+                if (newScroll != oldScrollY) {
+                    super.scrollTo(oldScrollX, newScroll);
+                    return true;
+                }
 			}
 		}
 		return super.onGenericMotionEvent(event);
@@ -2334,6 +2329,7 @@ DialogInterface.OnDismissListener, Runnable {
     @Override
     protected void onFocusChanged(boolean gainFocus, int direction, Rect previouslyFocusedRect) {
         super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
+        isCursorVisible = gainFocus;
         invalidateCaretRow();
     }
 
@@ -2350,7 +2346,6 @@ DialogInterface.OnDismissListener, Runnable {
 
     @Override
     protected void onVisibilityChanged(View changedView, int visibility) {
-        // TODO: Implement this method
         super.onVisibilityChanged(changedView, visibility);
         if (visibility != VISIBLE)
             mSigHelpPanel.hide();

@@ -1,38 +1,36 @@
 package cn.rbc.termuc;
 
 import android.app.*;
-
-import android.widget.*;
-import android.view.*;
-import java.io.*;
+import android.app.AlertDialog.*;
+import android.content.*;
+import android.content.pm.*;
+import android.content.res.*;
+import android.database.*;
+import android.graphics.*;
+import android.net.*;
 import android.os.*;
+import android.provider.*;
+import android.util.*;
+import android.view.*;
 import android.view.ViewTreeObserver.*;
 import android.view.inputmethod.*;
-import java.lang.reflect.*;
-import android.content.*;
-import android.content.res.*;
-import android.util.Log;
-import java.util.*;
-import android.net.*;
-import cn.rbc.codeeditor.util.*;
-import android.content.pm.*;
-import android.app.AlertDialog.Builder;
-import android.provider.*;
-import android.graphics.*;
-import android.database.*;
-import static android.Manifest.permission.*;
+import android.widget.*;
 import cn.rbc.codeeditor.lang.*;
-import java.nio.channels.*;
-import android.util.*;
+import cn.rbc.codeeditor.util.*;
+import java.io.*;
+import java.lang.reflect.*;
+import java.util.*;
+import org.xmlpull.v1.*;
+
+import static android.Manifest.permission.*;
 
 public class MainActivity extends Activity implements
 ActionBar.OnNavigationListener, OnGlobalLayoutListener,
 AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener,
 DialogInterface.OnClickListener, MenuItem.OnMenuItemClickListener,
-TextEditor.OnEditedListener,
-Runnable {
+TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 
-	public final static int SETTING = 0, ACCESS_FILE = 1;
+	public final static int SETTING = 0, ACCESS_FILE = 1, SHOW_FLOATING = 2;
 	public final static String PWD = "p", SHOWLIST = "l", FILES = "o", TESTAPP = "t", INITAPP = "i";
 	private HeaderAdapter hda;
 	private FileAdapter adp;
@@ -47,7 +45,10 @@ Runnable {
 	private SearchAction mSearchAction;
 	private String transStr;
 	private Dialog transDlg;
-    AttributeSet editAttr;
+    private AttributeSet editAttr;
+    private DebugPanel panel;
+    private DataSetObserver obs;
+    private int reqCode;
 
 	private void envInit(SharedPreferences pref) {
 		pwd = new File(pref.getString(PWD, Utils.ROOT.getPath()));
@@ -78,7 +79,7 @@ Runnable {
 	public boolean onNavigationItemSelected(int p1, long p2) {
 		if (byhand)
 			showFrag(getFragmentManager().findFragmentByTag(hda.getItem(p1)));
-		return false;
+		return true;
 	}
 
 	String getTag(int idx) {
@@ -97,12 +98,13 @@ Runnable {
                 | View.SYSTEM_UI_FLAG_FULLSCREEN);
         }
         super.onCreate(savedInstanceState);
-		hda = new HeaderAdapter(new ContextThemeWrapper(getBaseContext(), android.R.style.Theme_Holo), R.layout.header_dropdown_item);
+		hda = new HeaderAdapter(new ContextThemeWrapper(getBaseContext(), android.R.style.Theme_Holo), R.layout.header_item);
 		Resources.Theme rt = getResources().newTheme();
 		rt.applyStyle(android.R.style.Theme_Holo, true);
 		hda.setDropDownViewTheme(rt);
+        hda.setOnCloseListener(this);
 		getActionBar().setListNavigationCallbacks(hda, this);
-		hda.registerDataSetObserver(new DataSetObserver() {
+		hda.registerDataSetObserver(obs = new DataSetObserver() {
 				private int lastCount = 0;
 				public void onChanged() {
 					int count = hda.getCount();
@@ -135,6 +137,7 @@ Runnable {
 		l.setAdapter(adp);
 		l.setOnItemClickListener(this);
 		l.setOnItemLongClickListener(this);
+        panel = new DebugPanel(this);
 		getWindow().getDecorView().getViewTreeObserver().addOnGlobalLayoutListener(this);
 		mSearchAction = new SearchAction(this);
 		final int sdk = android.os.Build.VERSION.SDK_INT;
@@ -273,25 +276,30 @@ Runnable {
 					pth = pwd.getAbsolutePath();
 				} else {
 					sb = Project.buildEnvironment(f);
-					sb.append("x=$TMPDIR/termuc;mkdir $x 2>/dev/null;find $o -maxdepth 1 -type f \\( -iname '*.so' -o ! -name '*.*' \\) -exec cp {} $x \\;;x=(");
+					sb.append("x=$TMPDIR/termuc;find $o -maxdepth 1 -type f \\( -iname '*.so' -o ! -name '*.*' \\) -exec install -D {} $x \\;;x=(");
 					sb.append(Project.runCmd);
-					sb.append(") && chmod +x $x && ");
+					sb.append(") && ");
 					pth = Project.rootPath;
 				}
 				if (id == R.id.run)
-					sb.append("${x[@]} && echo -n \"\nPress any key to exit...\" && read");
+					sb.append("${x[@]}");
 				else {
-					sb.append("gdb -q ");
+					sb.append("/system/bin/nc -l -s 127.0.0.1 -p 48456 nice -n -20 gdb -q -i=mi -ret -tty `tty` --args ${x[@]} 2>/dev/null");
 					String fn = f.getName();
 					Document dc = codeEditor.getText();
-					id = dc.getMarksCount();
-					for (int i=0;i < id;i++)
-						sb.append(String.format("-ex 'b %s:%d' ", fn, dc.getMark(i)));
-					sb.append("-ex r --args ${x[@]}");
+					int l = dc.getMarksCount();
+					for (int i=0;i < l;i++) {
+                        int lineno = dc.getMark(i);
+                        panel.addBkpt(fn, lineno);
+                    }
 				}
+                sb.append(" && read -n1 -rsp \"\nPress any key to exit...\"");
 				Utils.run(this, Utils.PREF.concat("/usr/bin/bash"), new String[]{"-c",
 							  sb.toString()},
 						  pth, false);
+                if (id == R.id.debug) {
+					panel.connect();
+                }
 			} catch (android.util.MalformedJsonException je) {
 				toast(getString(R.string.parse_failed));
 			} catch (IOException ioe) {
@@ -505,24 +513,7 @@ Runnable {
 				startActionMode(mSearchAction);
 				break;
 			case R.id.close:
-				ActionBar ab = getActionBar();
-				int sd = ab.getSelectedNavigationIndex();
-				String _t = hda.getItem(ab.getSelectedNavigationIndex());
-				hda.remove(_t);
-				FragmentManager fm = getFragmentManager();
-				FragmentTransaction mTans = fm.beginTransaction();
-				mTans.remove(fm.findFragmentByTag(_t));
-				int cnt = hda.getCount();
-				if (hda.getCount() > 0) {
-					if (cnt == sd)
-						sd--;
-					lastFrag = (EditFragment)fm.findFragmentByTag(hda.getItem(sd));
-					mTans.show(lastFrag);
-				} else lastFrag = null;
-				mTans.commit();
-				Application app = Application.getInstance();
-                app.lsp.didClose(new File(_t));
-                app.load(_t);
+				closePage(getActionBar().getSelectedNavigationIndex());
 				break;
 			case R.id.prj_attr:
 				openFile(new File(Project.rootPath, Project.PROJ));
@@ -530,16 +521,16 @@ Runnable {
 			case R.id.prj_close:
 				Project.save(hda);
 				Project.close();
-				fm = getFragmentManager();
-				mTans = fm.beginTransaction();
+				FragmentManager fm = getFragmentManager();
+				FragmentTransaction trans = fm.beginTransaction();
                 Lsp lsp = Application.getInstance().lsp;
 				while (!hda.isEmpty()) {
 					String s = hda.getItem(0);
 					hda.remove(s);
-					mTans.remove(fm.findFragmentByTag(s));
+					trans.remove(fm.findFragmentByTag(s));
 					lsp.didClose(new File(s));
 				}
-				mTans.commit();
+				trans.commit();
 				lastFrag = null;
 				appMenu.findItem(R.id.prj).setEnabled(false);
 				setFileRunnable(false);
@@ -551,6 +542,30 @@ Runnable {
 				break;
         }
         return true;
+    }
+
+    @Override
+    public void onClick(View p1) {
+        closePage((Integer)p1.getTag());
+    }
+
+    private void closePage(int pos) {
+        String _t = hda.getItem(pos);
+        hda.remove(_t);
+        FragmentManager fm = getFragmentManager();
+        FragmentTransaction mTans = fm.beginTransaction();
+        mTans.remove(fm.findFragmentByTag(_t));
+        int cnt = hda.getCount();
+        if (hda.getCount() > 0) {
+            if (cnt == pos)
+                pos--;
+            lastFrag = (EditFragment)fm.findFragmentByTag(hda.getItem(pos));
+            mTans.show(lastFrag);
+        } else lastFrag = null;
+        mTans.commit();
+        Application app = Application.getInstance();
+        app.lsp.didClose(new File(_t));
+        app.load(_t);
     }
 
     public void inputKey(View view) {
@@ -670,6 +685,10 @@ Runnable {
 		super.onResume();
 		refresh();
 		onGlobalLayout();
+        if (reqCode != SHOW_FLOATING) {
+            panel.clean();
+            reqCode = 0;
+        }
 	}
 
 	@Override
@@ -707,8 +726,7 @@ Runnable {
 						int tp = f.type&EditFragment.TYPE_MASK;
 						if (chg && tp!=EditFragment.TYPE_TXT)
 							lsp.didOpen(f.getFile(), tp==EditFragment.TYPE_C?"c":"cpp", ed.getText().toString());
-					}
-					
+					}	
 				} else if (resultCode == RESULT_FIRST_USER) {
 					recreate();
 				}
@@ -717,6 +735,15 @@ Runnable {
 				if (resultCode == RESULT_OK)
 					refresh();
 				break;
+            case SHOW_FLOATING:
+                reqCode = requestCode;
+                if (Settings.canDrawOverlays(this)) {
+                    panel.show();
+                } else {
+                    panel.clean();
+					toast(getString(R.string.request_failed));
+				}
+                break;
 		}
 	}
 
@@ -799,7 +826,21 @@ Runnable {
         super.onStop();
     }
 
-    private void toast(CharSequence charSequence) {
+    @Override
+    protected void onDestroy() {
+        hda.unregisterDataSetObserver(obs);
+        obs = null;
+        hda = null;
+        panel.clean();
+        panel = null;
+        adp = null;
+        mSearchAction = null;
+        codeEditor = null;
+        msgEmpty = null;
+        super.onDestroy();
+    }
+
+    final void toast(CharSequence charSequence) {
         HelperUtils.show(Toast.makeText(this, charSequence, 0));
     }
 
@@ -815,4 +856,21 @@ Runnable {
 	public TextEditor getEditor() {
 		return codeEditor;
 	}
+
+    public TextEditor newEditor() {
+        if (editAttr == null) {
+            XmlPullParser xml;
+            try {
+                xml = getResources().getLayout(R.layout.edit);
+                int i;
+                do {
+                    i = xml.next();
+                } while(i != XmlPullParser.START_TAG);
+                editAttr = android.util.Xml.asAttributeSet(xml);
+            } catch (Exception ioe) {
+                ioe.printStackTrace();
+            }
+        }
+        return new TextEditor(this, editAttr);
+    }
 }

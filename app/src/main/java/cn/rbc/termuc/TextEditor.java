@@ -1,20 +1,15 @@
 package cn.rbc.termuc;
 
-import android.content.Context;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.util.AttributeSet;
-import android.util.DisplayMetrics;
-import android.util.TypedValue;
-import android.view.KeyEvent;
-import android.widget.Toast;
-import java.io.File;
-import cn.rbc.codeeditor.view.*;
-import cn.rbc.codeeditor.util.*;
-import cn.rbc.codeeditor.view.autocomplete.*;
-import cn.rbc.codeeditor.lang.*;
-import android.os.*;
+import android.content.*;
+import android.graphics.*;
 import android.text.*;
+import android.util.*;
+import android.view.*;
+import cn.rbc.codeeditor.lang.*;
+import cn.rbc.codeeditor.util.*;
+import cn.rbc.codeeditor.view.*;
+import cn.rbc.codeeditor.view.autocomplete.*;
+import java.io.*;
 
 public class TextEditor extends FreeScrollingTextField {
     // private Document _inputtingDoc;

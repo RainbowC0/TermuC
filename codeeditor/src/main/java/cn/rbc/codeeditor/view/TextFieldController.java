@@ -1,21 +1,15 @@
 package cn.rbc.codeeditor.view;
 
-import android.content.Context;
-import android.text.ClipboardManager;
-import android.view.inputmethod.InputMethodManager;
-
-import cn.rbc.codeeditor.lang.Language;
-import cn.rbc.codeeditor.util.Tokenizer;
-import cn.rbc.codeeditor.util.Pair;
-import cn.rbc.codeeditor.util.TextWarriorException;
-
-import java.util.List;
+import android.content.*;
+import android.os.*;
+import android.view.inputmethod.*;
+import android.widget.*;
+import cn.rbc.codeeditor.lang.*;
+import cn.rbc.codeeditor.util.*;
+import cn.rbc.termuc.*;
+import java.util.*;
 
 import static cn.rbc.codeeditor.util.DLog.log;
-import android.util.*;
-import cn.rbc.codeeditor.util.*;
-import java.util.*;
-import android.widget.*;
 
 //*********************************************************************
 //************************ Controller logic ***************************
@@ -490,14 +484,21 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
      * Does nothing if not in select mode.
      */
     public void copy(ClipboardManager cb) {
-        // the max limitation is 4096
+        // the max limitation is 1024*1024
 		FreeScrollingTextField fld = field;
         if (_isInSelectionMode &&
 			fld.mSelectionAnchor < fld.mSelectionEdge) {
             final int l = Math.min(fld.mSelectionAnchor+1024*1024, fld.mSelectionEdge);
             CharSequence contents = fld.hDoc.subSequence(fld.mSelectionAnchor,
 														 l);
-            cb.setText(contents);
+            try {
+                cb.setText(contents);
+            } catch (Exception e) {
+                e.printStackTrace();
+                if (e instanceof TransactionTooLargeException) {
+                    HelperUtils.show(Toast.makeText(fld.getContext(), R.string.too_long_copy, Toast.LENGTH_SHORT));
+                }
+            }
         }
     }
 

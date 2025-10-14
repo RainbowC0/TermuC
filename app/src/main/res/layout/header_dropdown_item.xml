@@ -1,7 +1,23 @@
-<CheckedTextView xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@android:id/text1"
-    style="?android:attr/spinnerDropDownItemStyle"
-    android:singleLine="true"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="?android:attr/listPreferredItemHeightSmall"
-    android:ellipsize="start"/>
+    android:orientation="horizontal"
+    style="?android:attr/buttonBarStyle">
+    <TextView
+        android:id="@android:id/text1"
+        style="?android:attr/spinnerDropDownItemStyle"
+        android:singleLine="true"
+        android:layout_weight="1"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:ellipsize="start"/>
+    <ImageView
+        android:id="@android:id/button1"
+        style="?android:attr/buttonBarButtonStyle"
+        android:clickable="false"
+        android:focusable="false"
+        android:layout_width="?android:attr/listPreferredItemHeightSmall"
+        android:src="@android:drawable/ic_menu_close_clear_cancel"
+        android:scaleType="centerInside"
+        android:layout_height="match_parent"/>
+</LinearLayout>

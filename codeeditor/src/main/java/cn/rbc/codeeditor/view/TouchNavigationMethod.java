@@ -1,18 +1,11 @@
 package cn.rbc.codeeditor.view;
 
-import android.graphics.Canvas;
-import android.graphics.Rect;
-import android.view.GestureDetector;
-import android.view.HapticFeedbackConstants;
-import android.view.KeyEvent;
-import android.view.MotionEvent;
+import android.content.*;
+import android.graphics.*;
 import android.view.*;
+import android.widget.*;
 import cn.rbc.codeeditor.util.*;
 import java.util.*;
-import android.widget.*;
-import android.util.*;
-import android.content.*;
-import cn.rbc.codeeditor.common.*;
 
 //TODO minimise unnecessary invalidate calls
 
@@ -105,15 +98,9 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
 		}
         boolean b = tf.isSelectText();
         if (b) {
-            int strictCharOffset = tf.coordToCharIndexStrict(x, y);
-            if (tf.inSelectionRange(strictCharOffset) ||
-				isNearChar(x, y, tf.getSelectionStart()) ||
-				isNearChar(x, y, tf.getSelectionEnd())) {
-            } else {
-                tf.selectText(b = false);
-            }
+            tf.selectText(false);
         }
-        if ((!b) && charOffset >= 0 && charOffset != tf.mCaretPosition) {
+        if (charOffset >= 0 && charOffset != tf.mCaretPosition) {
             tf.moveCaret(charOffset);
             tf.mSigHelpPanel.hide();
         }

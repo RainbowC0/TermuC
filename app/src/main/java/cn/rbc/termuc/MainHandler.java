@@ -1,14 +1,15 @@
 package cn.rbc.termuc;
-import android.os.*;
-import cn.rbc.codeeditor.util.*;
-import java.util.*;
 import android.app.*;
-import android.util.*;
-import java.io.*;
-import cn.rbc.codeeditor.view.autocomplete.*;
-import static android.util.JsonToken.*;
 import android.net.*;
+import android.os.*;
+import android.util.*;
+import cn.rbc.codeeditor.util.*;
 import cn.rbc.codeeditor.view.*;
+import cn.rbc.codeeditor.view.autocomplete.*;
+import java.io.*;
+import java.util.*;
+
+import static android.util.JsonToken.*;
 
 public class MainHandler extends Handler implements Comparator<ErrSpan> {
 	private MainActivity ma;
@@ -63,8 +64,6 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 					}
 				}
 				return;
-			case Lsp.UNLOCK:
-				lsp.unlock();
 			case Lsp.CLOSE:
 				return;
 		}

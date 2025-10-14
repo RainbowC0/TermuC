@@ -1,15 +1,12 @@
 package cn.rbc.codeeditor.view;
 
-import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.Paint;
-import android.graphics.Rect;
-import android.graphics.RectF;
-import android.util.DisplayMetrics;
-import android.util.TypedValue;
-import android.view.MotionEvent;
+import android.content.*;
+import android.graphics.*;
+import android.util.*;
+import android.view.*;
+import cn.rbc.codeeditor.common.*;
+import cn.rbc.codeeditor.util.*;
 
-import cn.rbc.codeeditor.common.OnCaretScrollListener;
 import cn.rbc.codeeditor.util.Pair;
 
 public class YoyoNavigationMethod extends TouchNavigationMethod implements OnCaretScrollListener {

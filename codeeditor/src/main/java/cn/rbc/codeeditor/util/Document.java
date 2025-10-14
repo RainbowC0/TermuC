@@ -8,16 +8,10 @@
  */
 package cn.rbc.codeeditor.util;
 
-import cn.rbc.codeeditor.lang.Language;
-
-import java.util.ArrayList;
-import java.util.Collections;
-
 import android.os.*;
-import android.text.*;
-import android.util.*;
-
+import cn.rbc.codeeditor.lang.*;
 import java.lang.ref.*;
+import java.util.*;
 
 /**
  * A decorator of TextBuffer that adds word-wrap capabilities.
@@ -113,15 +107,16 @@ public class Document extends TextBuffer implements Parcelable {
 
     @Override
     public synchronized void insert(char[] c, int start, int count, int charOffset, long timestamp, boolean undoable) {
+        int gapStart = _gapStartIndex;
+        super.insert(c, start, count, charOffset, timestamp, undoable);
         int startRow = Collections.binarySearch(_rowTable, logicalToRealIndex(charOffset));
         if (startRow >= 0) {
-            if (charOffset == _gapStartIndex)
+            if (charOffset == gapStart)
                 _rowTable.set(startRow, charOffset);
             startRow++;
         } else startRow = ~startRow;
         // Log.i("Lsp", "f"+_rowTable.toString()+ _gapStartIndex+" "+_gapEndIndex);
-        super.insert(c, start, count, charOffset, timestamp, undoable);
-
+        
         // Log.i("Lsp", "b"+charOffset+_rowTable.toString()+_gapStartIndex+" "+_gapEndIndex);
         
         /*if (startRow < 0) startRow = ~startRow;

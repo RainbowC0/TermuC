@@ -1,15 +1,11 @@
 package cn.rbc.codeeditor.view;
 
-import android.content.Context;
-import android.content.res.TypedArray;
-import android.graphics.Rect;
-import android.os.Build;
-import android.view.ActionMode;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.View;
-
-import cn.rbc.termuc.R;
+import android.content.*;
+import android.content.res.*;
+import android.graphics.*;
+import android.os.*;
+import android.view.*;
+import cn.rbc.termuc.*;
 
 public class ClipboardPanel implements ActionMode.Callback {
     protected FreeScrollingTextField _textField;
@@ -17,7 +13,6 @@ public class ClipboardPanel implements ActionMode.Callback {
 
     private ActionMode _clipboardActionMode;
     private ActionMode.Callback2 _clipboardActionModeCallback2;
-    private Rect caret;
 
     public ClipboardPanel(FreeScrollingTextField textField) {
         _textField = textField;
@@ -89,7 +84,6 @@ public class ClipboardPanel implements ActionMode.Callback {
 
 	@Override
 	public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-		// TODO: Implement this method
 		return false;
 	}
 
@@ -129,12 +123,14 @@ public class ClipboardPanel implements ActionMode.Callback {
 	}
 
     public void startClipboardActionNew() {
-        if (_clipboardActionMode == null)
+        if (_clipboardActionMode == null) {
             _textField.startActionMode(_clipboardActionModeCallback2, ActionMode.TYPE_FLOATING);
+        }
 	}
 
     private void initData() {
         _clipboardActionModeCallback2 = new ActionMode.Callback2() {
+           // private Rect caret;
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                 _clipboardActionMode = mode;
@@ -161,7 +157,6 @@ public class ClipboardPanel implements ActionMode.Callback {
 
             @Override
             public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
-                // TODO: Implement this method
                 return false;
             }
 
@@ -198,15 +193,15 @@ public class ClipboardPanel implements ActionMode.Callback {
             public void onDestroyActionMode(ActionMode p1) {
                 _textField.selectText(false);
                 _clipboardActionMode = null;
-                caret = null;
+                //caret = null;
             }
 
             @Override
             public void onGetContentRect(ActionMode mode, View view, Rect outRect) {
-                caret = _textField.getBoundingBox(_textField.getCaretPosition());
+                Rect caret = _textField.getBoundingBox(_textField.getSelectionStart());
                 int x = _textField.getScrollX(), y = _textField.getScrollY();
 				caret.top -= y;
-                caret.bottom -= y;
+                caret.bottom = Math.max(0, caret.bottom-y);
 				caret.left -= x;
                 caret.right -= x;
                 outRect.set(caret);

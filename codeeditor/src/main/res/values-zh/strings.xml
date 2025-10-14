@@ -2,4 +2,5 @@
 <resources>
 	<string name="delete">删除</string>
 	<string name="format">格式化</string>
+    <string name="too_long_copy">文本太长，无法复制</string>
 </resources>

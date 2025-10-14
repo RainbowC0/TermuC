@@ -1,6 +1,6 @@
 package cn.rbc.termuc;
-import java.io.*;
 import android.util.*;
+import java.io.*;
 import java.util.*;
 
 public class Project
@@ -100,7 +100,7 @@ public class Project
 		if (f.lastModified()>lastModified)
 			load(f, null);
 	}
-	/*
+	/**
 	 * Local environment variables
 	 * $f  file name
 	 * $e  file name without suffix

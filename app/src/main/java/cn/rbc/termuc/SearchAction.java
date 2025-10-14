@@ -1,18 +1,16 @@
 package cn.rbc.termuc;
-import android.view.ActionMode;
-import android.view.*;
-import android.content.*;
-import android.app.*;
-import android.widget.*;
-import android.text.*;
-import cn.rbc.codeeditor.util.*;
 import android.app.AlertDialog.*;
+import android.content.*;
+import android.text.*;
+import android.view.*;
+import android.widget.*;
+import cn.rbc.codeeditor.util.*;
 
 public class SearchAction implements
-ActionMode.Callback, TextWatcher, TextView.OnEditorActionListener, DialogInterface.OnClickListener {
+ActionMode.Callback, TextWatcher, TextView.OnEditorActionListener,
+DialogInterface.OnClickListener {
 	private MainActivity ma;
 	private EditText e;
-	private Document dp;
 	private int idx = 0;
     private View transV;
 
@@ -43,9 +41,7 @@ ActionMode.Callback, TextWatcher, TextView.OnEditorActionListener, DialogInterfa
 			idx = 0;
 		e.addTextChangedListener(this);
 		e.setOnEditorActionListener(this);
-		e.requestFocus();
 		p1.setCustomView(v);
-		dp = ma.getEditor().getText();
 		ma.getMenuInflater().inflate(R.menu.search, p2);
 		return true;
 	}
@@ -58,7 +54,8 @@ ActionMode.Callback, TextWatcher, TextView.OnEditorActionListener, DialogInterfa
             Builder bd = new Builder(ma);
             bd.setTitle(R.string.replace);
             View v = View.inflate(ma, R.layout.replace, null);
-            ((TextView)v.findViewById(R.id.replace_find)).setText(e.getText());
+            final EditText ed = v.findViewById(R.id.replace_find);
+            ed.setText(e.getText());
             transV = v;
             bd.setView(v);
             bd.setPositiveButton(android.R.string.ok, this);
@@ -117,7 +114,7 @@ ActionMode.Callback, TextWatcher, TextView.OnEditorActionListener, DialogInterfa
 
 	private int indexDoc(CharSequence cs, int idx) {
 		int len = cs.length();
-        Document doc = dp;
+        Document doc = ma.getEditor().getText();
 		int i, ldp = doc.length()-len;
 		D: for (i=idx; i<ldp; i++) {
 			for (int k=0;k<len;k++)
@@ -130,7 +127,7 @@ ActionMode.Callback, TextWatcher, TextView.OnEditorActionListener, DialogInterfa
 
 	private int rindexDoc(CharSequence cs, int idx) {
 		int len = cs.length();
-        Document doc = dp;
+        Document doc = ma.getEditor().getText();
 		D: for (int i=idx; i>=0; i--) {
 			for (int k=0;k<len;k++)
 				if (cs.charAt(k)!=doc.charAt(i+k))
@@ -142,7 +139,7 @@ ActionMode.Callback, TextWatcher, TextView.OnEditorActionListener, DialogInterfa
 
     @Override
     public void onClick(DialogInterface p1, int p2) {
-        Document doc = dp;
+        Document doc = ma.getEditor().getText();
         CharSequence s = ((EditText)transV.findViewById(R.id.replace_find)).getText();
         final int slen = s.length();
         if (slen == 0) return;

@@ -1,11 +1,10 @@
 package cn.rbc.termuc;
 import android.content.*;
-import android.preference.*;
 import android.graphics.*;
+import android.preference.*;
+import android.util.*;
 import cn.rbc.codeeditor.util.*;
 import java.util.*;
-import java.util.concurrent.locks.*;
-import android.util.*;
 
 public class Application extends android.app.Application {
 	final static String
@@ -38,7 +37,7 @@ public class Application extends android.app.Application {
 
 	@Override
 	public void onCreate() {
-		super.onCreate();
+        super.onCreate();
 		PreferenceManager.setDefaultValues(this, R.xml.settings, false);
 		initConfs();
         ls = new ArrayMap<>();

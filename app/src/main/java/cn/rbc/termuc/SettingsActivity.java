@@ -1,11 +1,8 @@
 package cn.rbc.termuc;
-import android.preference.*;
-import android.os.*;
-import android.view.*;
-import cn.rbc.codeeditor.util.*;
-import android.widget.*;
 import android.content.*;
-import android.graphics.*;
+import android.os.*;
+import android.preference.*;
+import android.view.*;
 
 public class SettingsActivity extends PreferenceActivity
 implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickListener
@@ -23,8 +20,6 @@ implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickLi
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
-		/*if ("d".equals(Application.theme))
-			setTheme(R.style.AppThemeDark);*/
         Utils.setNightMode(this, Application.theme);
 		super.onCreate(savedInstanceState);
 		getActionBar().setDisplayHomeAsUpEnabled(true);
@@ -50,7 +45,6 @@ implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickLi
 		findPreference(Application.KEY_INITAPP).setOnPreferenceClickListener(this);
 		onPreferenceChange(mEngine, mEngine.getValue());
 
-		//mDark = Application.dark_mode;
         mTheme = Application.theme;
         mPure = Application.pure_mode;
 		mWrap = Application.wordwrap;

@@ -38,7 +38,7 @@
 	<string name="completion">Auto completion</string>
 	<string name="engine">Engine</string>
 	<string name="lang_serv">Language Server</string>
-	<string name="local">Local Snippets</string>
+	<string name="builtin">Built-in Snippets</string>
 	<string name="none">None</string>
 	<string name="lsp_host">Server host</string>
 	<string name="lsp_port">Server port</string>
@@ -75,6 +75,13 @@
 	<string name="init_termux">Initialize Termux</string>
 	<string name="init_inform">To complete the configuration, please copy the instructions and jump to Termux paste run.\nDuring runtime, it is necessary to manually configure permissions for Termux on all system settings pages.</string>
 	<string name="copy_jump">Copy &amp; jump</string>
+    <string name="init_prefix"
+        >STR=Setup\\ storage;<i
+        />DOA="\"Setup 'draw over apps' (Press ENTER)\"";<i
+        />IBO="\"Setup 'ignore battery optimizations' (Press ENTER)\"";<i
+        />SBP=\"Setup &amp; Background pop-ups permissions\";<i
+        />ALE="\"Setup 'allow-external-apps'\"";<i
+        />ICL=Install\\ Clang;</string>
 	<string name="initialized">Initialized</string>
 	<string name="request_failed">Request permissions failed</string>
 	<string name="parse_failed">Configuration parse failed!</string>
@@ -84,6 +91,20 @@
     <string name="with_format">With .clang-format</string>
     <string name="empty_name">Empty name!</string>
     <string name="replace">Replace</string>
+	<string name="cont">Continue</string>
+	<string name="pause">Pause</string>
+	<string name="skip">Next line</string>
+	<string name="step">Step in</string>
+	<string name="fini">Step out</string>
+    <string name="variable">Variables</string>
+    <string name="frame">Frames</string>
+    <string name="console">Console</string>
+    <string name="bkpt">Breakpoints</string>
+    <string name="message">Message</string>
+    <string name="gdb_cmd">GDB Command</string>
+	<string name="bkpt_at">Breakpoint at %s</string>
+    <string name="no_var">No variables</string>
+    <string name="no_frame">No frames</string>
     <string-array name="themes">
         <item>@string/light</item>
         <item>@string/dark</item>
@@ -99,7 +120,7 @@
 	</string-array>
 	<string-array name="engine">
 		<item>@string/lang_serv</item>
-		<item>@string/local</item>
+		<item>@string/builtin</item>
 		<item>@string/none</item>
 	</string-array>
 	<string-array name="v_engine">

@@ -1,0 +1,5 @@
+• Add floating-window UI debugger
+• Optimize mouse operations
+• Adapt for Termux 0.119.0 version
+• Fix bugs when copying large text
+• Fix bugs when auto-completing

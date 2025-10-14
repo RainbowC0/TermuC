@@ -33,4 +33,9 @@
     <style name="actionButton" parent="@android:style/Widget.Holo.ActionButton">
         <item name="android:minWidth">48dp</item>
     </style>
+    
+    <!--style name="popupDialogAnim">
+        <item name="android:windowEnterAnimation">@anim/pop_out</item>
+        <item name="android:windowExitAnimation">@anim/pop_in</item>
+    </style-->
 </resources>

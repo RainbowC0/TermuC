@@ -6,9 +6,9 @@ android {
     defaultConfig {
         applicationId "cn.rbc.termuc"
         minSdkVersion 21
-        targetSdkVersion 30
-        versionCode 8
-        versionName "0.1.7"
+        targetSdkVersion 31
+        versionCode 9
+        versionName "0.2.0-alpha"
     }
 
     buildTypes {

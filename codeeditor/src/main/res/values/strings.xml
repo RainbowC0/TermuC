@@ -3,6 +3,7 @@
 	<string name="delete">Delete</string>
 	<string name="format">Format</string>
     <string name="empty"></string>
+    <string name="too_long_copy">Too long text to copy</string>
     <string name="icon_text"><font color="#808080">\uea93</font></string>
     <string name="icon_method"><font color="#883dc2">\uea8c</font></string>
     <string name="icon_field"><font color="#0098ff">\ueb5f</font></string>

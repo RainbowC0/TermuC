@@ -1,11 +1,10 @@
 package cn.rbc.termuc;
-import android.app.Activity;
-import android.os.*;
-import android.widget.*;
-import android.view.*;
-import java.io.*;
-import android.content.*;
 import android.app.*;
+import android.content.*;
+import android.os.*;
+import android.view.*;
+import android.widget.*;
+import java.io.*;
 
 public class FileActivity extends Activity
 implements ListView.OnItemClickListener, FileFilter

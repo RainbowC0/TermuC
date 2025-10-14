@@ -28,6 +28,7 @@ public class CharSeqReader extends Reader {
                 if (c == Language.EOF) len = n;
 				chars[i++] = c;
 			} catch (Exception e) {
+                e.printStackTrace();
 			}
 		}
 		if (len <= 0)

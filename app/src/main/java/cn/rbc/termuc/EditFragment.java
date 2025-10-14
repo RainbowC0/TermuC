@@ -1,33 +1,31 @@
 package cn.rbc.termuc;
 import android.app.*;
-import android.os.*;
-import android.view.*;
-import android.widget.*;
-import java.io.*;
-import android.net.*;
-import cn.rbc.codeeditor.lang.*;
-import cn.rbc.codeeditor.common.*;
-import cn.rbc.codeeditor.util.*;
-import cn.rbc.codeeditor.lang.c.*;
-import cn.rbc.codeeditor.view.*;
+import android.app.AlertDialog.*;
 import android.content.*;
 import android.content.res.*;
-import android.util.DisplayMetrics;
-import android.util.TypedValue;
-import android.app.AlertDialog.Builder;
-import java.util.ArrayList;
-import java.util.List;
-import org.xmlpull.v1.*;
+import android.os.*;
+import android.util.*;
+import android.view.*;
+import android.widget.*;
+import cn.rbc.codeeditor.common.*;
+import cn.rbc.codeeditor.lang.*;
+import cn.rbc.codeeditor.lang.c.*;
+import cn.rbc.codeeditor.util.*;
+import cn.rbc.codeeditor.view.*;
+import java.io.*;
+import java.util.*;
+
+import cn.rbc.codeeditor.lang.Formatter;
+import cn.rbc.codeeditor.util.Range;
 
 public class EditFragment extends Fragment
-implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
-{
+implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter {
 	public final static int
 	TYPE_C = 1,
 	TYPE_CPP = 2,
 	TYPE_HEADER = 4,
 	TYPE_TXT = 0,
-	TYPE_BLOD = 0x80000000,
+	TYPE_BLOB = 0x80000000,
 	TYPE_MASK = 3;
 	final static String FL = "f", TP = "t", CS = "c", TS = "s", MK = "m", VS = "v";
 	private File fl;
@@ -46,27 +44,13 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 	}
 
 	@Override
-	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
-	{
+	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		final MainActivity ma = (MainActivity)getActivity();
-        if (ma.editAttr == null) {
-            XmlPullParser xml;
-            try {
-            xml = getResources().getLayout(R.layout.edit);
-            int i;
-            do {
-                i = xml.next();
-            } while(i != XmlPullParser.START_TAG);
-            ma.editAttr = android.util.Xml.asAttributeSet(xml);
-            } catch (Exception ioe) {
-                ioe.printStackTrace();
-            }
-        }
-		TextEditor editor = new TextEditor(ma, ma.editAttr); //TextEditor)View.inflate(ma, R.layout.edit, null);
+		TextEditor editor = ma.newEditor();
 		ed = editor;
 		if ("d".equals(Application.theme)
-          ||"s".equals(Application.theme)
-            &&((getResources().getConfiguration().uiMode&Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES))
+            || "s".equals(Application.theme)
+            && ((getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES))
 			editor.setColorScheme(ColorSchemeDark.getInstance());
         editor.setPureMode(Application.pure_mode);
 		DisplayMetrics dm = getResources().getDisplayMetrics();
@@ -80,37 +64,42 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 		editor.setLayoutParams(new ViewGroup.LayoutParams(
 								   ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         editor.setOnEditedListener(ma);
-		if (savedInstanceState!=null) {
-			String pth = (String)savedInstanceState.getCharSequence(FL);
-            fl = new File(pth);
-			type = savedInstanceState.getInt(TP, type);
-			mVer = savedInstanceState.getInt(VS, mVer);
-			Document doc = Application.getInstance().load(pth); // savedInstanceState.getParcelable(CS);
-			doc.setMetrics(editor);
-			doc.resetRowTable();
-			editor.setDocument(doc);
-			editor.setTextSize(savedInstanceState.getInt(TS));
-		} else try {
-			int tp = type&TYPE_MASK;
-			if (tp == TYPE_C) {
-				C = "clang";
-				TextEditor.setLanguage(CLanguage.getInstance());
-			} else if (tp == TYPE_CPP) {
-				C = "clang++";
-				TextEditor.setLanguage(CppLanguage.getInstance());
-			} else {
-				C = null;
-				TextEditor.setLanguage(LanguageNonProg.getInstance());
-			}
-			ma.setEditor(editor);
-            Document s = load();
-			if (tp != TYPE_TXT && "s".equals(Application.completion))
-				Application.getInstance().lsp.didOpen(fl, tp==TYPE_CPP?"cpp":"c", s.toString());
-		} catch(IOException fnf) {
+        try {
+            Document doc = null;
+            if (savedInstanceState != null) {
+                String pth = (String)savedInstanceState.getCharSequence(FL);
+                fl = new File(pth);
+                type = savedInstanceState.getInt(TP, type);
+                mVer = savedInstanceState.getInt(VS, mVer);
+                doc = Application.getInstance().load(pth);
+                editor.setTextSize(savedInstanceState.getInt(TS));
+            }
+            if (doc != null) {
+                doc.setMetrics(editor);
+                doc.resetRowTable();
+                editor.setDocument(doc);
+            } else {
+                int tp = type & TYPE_MASK;
+                if (tp == TYPE_C) {
+                    C = "clang";
+                    TextEditor.setLanguage(CLanguage.getInstance());
+                } else if (tp == TYPE_CPP) {
+                    C = "clang++";
+                    TextEditor.setLanguage(CppLanguage.getInstance());
+                } else {
+                    C = null;
+                    TextEditor.setLanguage(LanguageNonProg.getInstance());
+                }
+                ma.setEditor(editor);
+                doc = load();
+                if (tp != TYPE_TXT && "s".equals(Application.completion))
+                    Application.getInstance().lsp.didOpen(fl, tp == TYPE_CPP ?"cpp": "c", doc.toString());
+            } 
+        } catch (IOException fnf) {
 			fnf.printStackTrace();
-			HelperUtils.show(Toast.makeText(ma, R.string.open_failed+fnf.getMessage(), Toast.LENGTH_SHORT));
+			HelperUtils.show(Toast.makeText(ma, getString(R.string.open_failed) + fnf.getMessage(), Toast.LENGTH_SHORT));
 		}
-		if ((type&TYPE_MASK)!=TYPE_TXT) {
+		if ((type & TYPE_MASK) != TYPE_TXT) {
 			if ("s".equals(Application.completion))
 				editor.setFormatter(this);
 			editor.setAutoComplete("l".equals(Application.completion));
@@ -127,7 +116,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 	public void format(Document txt, int width) {
 		int start = ed.getSelectionStart(), end = ed.getSelectionEnd();
 		Lsp lsp = Application.getInstance().lsp;
-        if (start==end)
+        if (start == end)
 			lsp.formatting(fl, width, ed.isUseSpace());
 		else {
 			Range range = new Range();
@@ -152,6 +141,8 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 	private volatile int mVer = 0;
 
 	public void onChanged(String c, int start, boolean ins, boolean typ) {
+        if (!"s".equals(Application.completion))
+            return;
 		TextEditor editor = ed;
 		Document text = editor.getText();
 		boolean wordwrap = editor.isWordWrap();
@@ -162,6 +153,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 		} else {
 			range.stl = text.findRowNumber(start);
 			range.stc = text.getRowOffset(range.stl);
+            android.util.Log.i("Lsp", range.stl + "," + start + "-" + range.stc);
 		}
 		range.stc = start - range.stc;
 		if (ins) { // insert
@@ -184,9 +176,9 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 		Lsp lsp = Application.getInstance().lsp;
 		lsp.didChange(fl, ++mVer, changes);
 		// when inserting text and typing, call for completion
-		if (ins && typ && c.length()==1) {
-            lsp.signatureHelpTry(fl, range.enl, range.enc+1, c.charAt(0), editor.getSigHelpPanel().isShowing());
-			lsp.completionTry(fl, range.enl, range.enc+1, c.charAt(0));
+		if (ins && typ && c.length() == 1) {
+            lsp.signatureHelpTry(fl, range.enl, range.enc + 1, c.charAt(0), editor.getSigHelpPanel().isShowing());
+			lsp.completionTry(fl, range.enl, range.enc + 1, c.charAt(0));
         }
 		changes.clear();
 	}
@@ -200,7 +192,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 
 	private void refresh() {
 		long mLast = fl.lastModified();
-		if (mLast>lastModified) {
+		if (mLast > lastModified) {
 			lastModified = mLast;
 			Builder bd = new Builder(getContext());
 			bd.setTitle(fl.getName());
@@ -218,7 +210,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
             ed.mCtrlr.determineSpans();
             if ("s".equals(Application.completion))
 			    Application.getInstance().lsp.didChange(fl, 0, cs.toString());
-		} catch(IOException ioe) {
+		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
 	}
@@ -229,8 +221,8 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 		if (!hidden) {
 			MainActivity ma = (MainActivity)getActivity();
 			ma.setEditor(ed);
-			ma.setFileRunnable((type&TYPE_HEADER)==0);
-			int tp = type&TYPE_MASK;
+			ma.setFileRunnable((type & TYPE_HEADER) == 0);
+			int tp = type & TYPE_MASK;
 			if (tp == TYPE_C) {// C
 				TextEditor.setLanguage(CLanguage.getInstance());
 				C = "clang";
@@ -263,7 +255,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
         Reader rd = new CharSeqReader(doc);
         char[] buf = new char[1024];
         int i;
-        while ((i=rd.read(buf)) > 0) {
+        while ((i = rd.read(buf)) > 0) {
             writer.write(buf, 0, i);
         }
         rd.close();
@@ -278,17 +270,16 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
         int i;
         Document doc = ed.getText();
         StringBuilder sb = new StringBuilder();
-        doc.delete(0, doc.length()-1, 0L, false);
-		while ((i=fr.read(buf))!=-1) {
+        doc.delete(0, doc.length() - 1, 0L, false);
+		while ((i = fr.read(buf)) != -1) {
             sb.append(buf, 0, i);
-			//doc.insert(buf, 0, i, doc.length()-1, 0L, false);
         }
 		fr.close();
         doc.setText(sb);
         doc.resetUndos();
         doc.clearSpans();
         doc.analyzeWordWrap();
-		if ((type&TYPE_MASK)!=TYPE_TXT && "s".equals(Application.completion))
+		if ((type & TYPE_MASK) != TYPE_TXT && "s".equals(Application.completion))
 			doc.setOnTextChangeListener(this);
 		return doc;
 	}
@@ -309,7 +300,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter
 		else if (!Utils.isBlob(pwd))
 			_tp = TYPE_TXT | TYPE_HEADER;
 		else
-			_tp = TYPE_BLOD;
+			_tp = TYPE_BLOB;
 		return _tp;
 	}
 }

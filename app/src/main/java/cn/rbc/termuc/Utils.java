@@ -1,36 +1,34 @@
 package cn.rbc.termuc;
-import android.content.*;
-import android.os.*;
-import java.io.*;
-import android.util.*;
-import java.util.*;
-import android.widget.*;
 import android.app.*;
-import android.view.*;
+import android.app.AlertDialog.*;
+import android.content.*;
+import android.content.pm.*;
+import android.content.res.*;
 import android.graphics.drawable.*;
 import android.net.*;
-import android.content.pm.*;
+import android.os.*;
+import android.view.*;
+import android.widget.*;
 import cn.rbc.codeeditor.util.*;
-import android.app.AlertDialog.Builder;
-import android.content.res.*;
+import java.io.*;
 import java.nio.channels.*;
 
 public class Utils {
 	public final static File ROOT = Environment.getExternalStorageDirectory();
-	public final static String PREF = "/data/data/com.termux/files";
-	public final static String PERM_EXEC = "com.termux.permission.RUN_COMMAND";
-    private final static String PREFC = "com.termux.RUN_COMMAND_";
+    public final static String TERMUX = "com.termux";
+	public final static String PREF = "/data/data/" + TERMUX + "/files";
+	public final static String PERM_EXEC = TERMUX + ".permission.RUN_COMMAND";
+    private final static String PREFC = TERMUX + ".RUN_COMMAND_";
 
 	public static void run(Context cont, String cmd, String[] args, String pwd, boolean background) {
         Intent it = new Intent();
-        it.setClassName("com.termux", "com.termux.app.RunCommandService");
-        it.setAction("com.termux.RUN_COMMAND");
-        it.putExtra(PREFC.concat("PATH"), cmd);
-       // it.putExtra(PREFC.concat("RUNNER"), "app-shell");
-        it.putExtra(PREFC.concat("ARGUMENTS"), args);
-        it.putExtra(PREFC.concat("WORKDIR"), pwd);
-        it.putExtra(PREFC.concat("BACKGROUND"), background);
-        it.putExtra(PREFC.concat("SESSION_ACTION"), "0");
+        it.setClassName(TERMUX, TERMUX + ".app.RunCommandService");
+        it.setAction(TERMUX + ".RUN_COMMAND");
+        it.putExtra(PREFC + "PATH", cmd);
+        it.putExtra(PREFC + "ARGUMENTS", args);
+        it.putExtra(PREFC + "WORKDIR", pwd);
+        it.putExtra(PREFC + "BACKGROUND", background);
+        it.putExtra(PREFC + "SESSION_ACTION", "0");
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
             cont.startForegroundService(it);
         else
@@ -71,7 +69,7 @@ public class Utils {
 	public static void testApp(Activity ctx, boolean manually) {
 		PackageManager pm = ctx.getPackageManager();
 		try {
-			pm.getPackageInfo("com.termux", PackageManager.GET_GIDS);
+			pm.getPackageInfo(TERMUX, PackageManager.GET_GIDS);
 			if (manually) HelperUtils.show(Toast.makeText(ctx, R.string.installed, Toast.LENGTH_SHORT));
 		} catch (PackageManager.NameNotFoundException e) {
 			Builder bd = new Builder(ctx);
@@ -80,7 +78,8 @@ public class Utils {
 			bd.setNegativeButton(android.R.string.cancel, null);
 			Install oc = new Install(ctx);
 			bd.setPositiveButton(android.R.string.ok, oc);
-			if (!manually) bd.setNeutralButton(R.string.no_remind, oc);
+            if (!manually)
+			    bd.setNeutralButton(R.string.no_remind, oc);
 			bd.create().show();
 		}
 	}
@@ -104,50 +103,22 @@ public class Utils {
 				app.getPreferences(Activity.MODE_PRIVATE).edit().putBoolean(MainActivity.TESTAPP, false).commit();
 				return;
 			}
-			Uri uri = Uri.parse("market://details?id=com.termux");
+			Uri uri = Uri.parse("market://details?id=" + TERMUX);
 			Intent it = new Intent(Intent.ACTION_VIEW, uri);
-			PackageManager pm = app.getPackageManager();
-			List<ResolveInfo> lst = pm.queryIntentActivities(it, 0);
-			List<Map<String,Object>> list = new ArrayList<>();
-			Map<String,Object> m;
-			final Intent[] its = new Intent[lst.size() + 2];
-			int i = 0;
-			for (ResolveInfo ri:lst) {
-				m = new ArrayMap<>();
-				m.put("i", ri.loadIcon(pm));
-				m.put("n", ri.loadLabel(pm));
-				list.add(m);
-				it = new Intent(Intent.ACTION_VIEW, uri);
-				it.setPackage(ri.activityInfo.packageName);
-				its[i++] = it;
-			}
-			m = new ArrayMap<>();
-			m.put("i", null);
-			m.put("n", "Github Release website");
-			list.add(m);
-			its[i++] = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/termux/termux-app/releases"));
-			m = new ArrayMap<>();
-			m.put("i", null);
-			m.put("n", "F-Droid website");
-			list.add(m);
-			its[i] = new Intent(Intent.ACTION_VIEW, Uri.parse("https://f-droid.org/packages/com.termux"));
-			Builder bd = new Builder(app);
-			bd.setTitle(R.string.install_via);
-			bd.setNegativeButton(android.R.string.cancel, null);
-			SimpleAdapter sadp = new SimpleAdapter(app, list, R.layout.file_item, new String[]{"i", "n"}, new int[]{R.id.file_icon, R.id.file_name});
-			sadp.setViewBinder(this);
-			bd.setAdapter(sadp, new DialogInterface.OnClickListener() {
-					public void onClick(DialogInterface d, int p) {
-						mApp.startActivity(its[p]);
-					}
-				});
-			bd.create().show();
+            it = Intent.createChooser(it, app.getString(R.string.install_via));
+            String pkgName = app.getPackageName();
+            Intent[] extraIntents = {
+                newLabeled(pkgName, "Github Release", "https://github.com/termux/termux-app/releases"),
+                newLabeled(pkgName, "F-Droid", "https://f-droid.org/packages/com.termux")
+            };
+            it.putExtra(Intent.EXTRA_INITIAL_INTENTS, extraIntents);
+            app.startActivity(it);
 		}
 	}
 
 	public static void initBack(Activity ctx, boolean manually) {
 		try {
-			ctx.getPackageManager().getPackageInfo("com.termux", PackageManager.GET_GIDS);
+			ctx.getPackageManager().getPackageInfo(TERMUX, PackageManager.GET_GIDS);
 			Builder bd = new Builder(ctx);
 			bd.setTitle(R.string.init_termux);
 			bd.setMessage(R.string.init_inform);
@@ -167,7 +138,7 @@ public class Utils {
 		ClipboardManager cm = (ClipboardManager)ctx.getSystemService(Context.CLIPBOARD_SERVICE);
 		try {
 			BufferedInputStream is = new BufferedInputStream(ctx.getAssets().open("init"));
-			StringBuilder sb = new StringBuilder();
+			StringBuilder sb = new StringBuilder(ctx.getString(R.string.init_prefix));
 			int i;
 			byte[] bt = new byte[1024];
 			while ((i = is.read(bt)) > 0)
@@ -175,9 +146,10 @@ public class Utils {
 			is.close();
 			ClipData cd = ClipData.newPlainText("Label", sb.toString());
 			cm.setPrimaryClip(cd);
-			Intent it = new Intent(Intent.ACTION_MAIN);
-			it.setPackage("com.termux");
-			ctx.startActivity(it);
+            Intent it = ctx.getPackageManager().getLaunchIntentForPackage(TERMUX);
+            if (it != null) {
+			    ctx.startActivity(it);
+            }
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
@@ -211,7 +183,7 @@ public class Utils {
                 dumpFile(am.open(new File(type, s).getPath()), new File(des, s));
             Project.load(new File(des, Project.PROJ), null);
             return true;
-        } catch(IOException ioe) {
+        } catch (IOException ioe) {
             ioe.printStackTrace();
             return false;
         }
@@ -226,8 +198,15 @@ public class Utils {
     }
 
     public static void setNightMode(Context ctx, String thm) {
-        ctx.setTheme("s".equals(thm)?R.style.AppThemeDayNight:
-            "l".equals(thm)?R.style.AppTheme:
-            R.style.AppThemeDark);
+        ctx.setTheme("s".equals(thm) ?R.style.AppThemeDayNight:
+                     "l".equals(thm) ?R.style.AppTheme:
+                     R.style.AppThemeDark);
+    }
+
+    private static Intent newLabeled(String srcPkg, CharSequence title, String url) {
+        Intent it = Build.VERSION.SDK_INT < 33 ? new Intent() : new LabeledIntent(srcPkg, title, 0);
+        it.setAction(Intent.ACTION_VIEW);
+        it.setData(Uri.parse(url));
+        return it;
     }
 }

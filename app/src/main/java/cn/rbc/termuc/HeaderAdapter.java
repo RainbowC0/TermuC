@@ -1,22 +1,22 @@
 package cn.rbc.termuc;
-import android.widget.*;
-import android.view.*;
 import android.content.*;
-import java.io.*;
-import android.text.*;
-import java.util.*;
 import android.os.*;
-import android.util.*;
+import android.view.*;
+import android.widget.*;
+import java.io.*;
+import java.util.*;
 
 public class HeaderAdapter extends ArrayAdapter<String>
-implements SpinnerAdapter, Iterable<String>
+implements Iterable<String>
 {
     private final static String BITS = "bs";
     private ArrayList<Boolean> bs;
+    private View.OnClickListener mOnCloseListener;
 
 	public HeaderAdapter(Context context, int id) {
-		super(context, id);
+		super(context, id, android.R.id.text1);
         bs = new ArrayList<>();
+        setDropDownViewResource(R.layout.header_dropdown_item);
 	}
 
 	@Override
@@ -56,7 +56,11 @@ implements SpinnerAdapter, Iterable<String>
 
 	@Override
 	public View getDropDownView(int position, View convertView, ViewGroup parent) {
-		return super.getView(position, convertView, parent);
+		View v = super.getDropDownView(position, convertView, parent);
+        View btn = v.findViewById(android.R.id.button1);
+        btn.setTag(position);
+        btn.setOnClickListener(mOnCloseListener);
+        return v;
 	}
 
     @Override
@@ -65,6 +69,10 @@ implements SpinnerAdapter, Iterable<String>
         if (bs.size() > pos)
             bs.remove(pos);
         super.remove(object);
+    }
+
+    public void setOnCloseListener(View.OnClickListener lis) {
+        mOnCloseListener = lis;
     }
 
 	@Override

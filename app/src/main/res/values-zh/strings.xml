@@ -38,7 +38,7 @@
 	<string name="completion">自动补全</string>
 	<string name="engine">引擎</string>
 	<string name="lang_serv">语言服务器</string>
-	<string name="local">本地Snippets</string>
+	<string name="builtin">内置代码片段</string>
 	<string name="none">无</string>
 	<string name="lsp_host">服务器地址</string>
 	<string name="lsp_port">服务器端口</string>
@@ -75,6 +75,13 @@
 	<string name="init_termux">初始化 Termux</string>
 	<string name="init_inform">为完成配置，请复制指令并跳转 Termux 粘贴运行。\n运行时需要在所有系统设置页面手动为 Termux 配置权限。</string>
 	<string name="copy_jump">复制并跳转</string>
+    <string name="init_prefix"
+        >STR=设置存储;<i
+        />DOA=设置悬浮窗权限（请按回车）;<i
+        />IBO=设置禁用电池优化（请按回车）;<i
+        />SBP=设置关联启动与后台弹出权限（请按回车）;<i
+        />ALE=设置allow-external-apps;<i
+        />ICL=安装Clang;</string>
 	<string name="initialized">已配置</string>
 	<string name="request_failed">申请权限失败</string>
 	<string name="parse_failed">配置文件解析失败！</string>
@@ -84,4 +91,18 @@
     <string name="with_format">生成 .clang-format</string>
     <string name="empty_name">名称为空！</string>
     <string name="replace">替换</string>
+	<string name="cont">继续</string>
+	<string name="pause">暂停</string>
+	<string name="skip">步过</string>
+	<string name="step">步入</string>
+	<string name="fini">步出</string>
+    <string name="variable">变量</string>
+    <string name="frame">帧</string>
+    <string name="console">控制台</string>
+    <string name="bkpt">断点</string>
+    <string name="message">信息</string>
+    <string name="gdb_cmd">GDB命令</string>
+	<string name="bkpt_at">断点于 %s</string>
+    <string name="no_var">无变量信息</string>
+    <string name="no_frame">无帧信息</string>
 </resources>

@@ -3,25 +3,29 @@
 	xmlns:android="http://schemas.android.com/apk/res/android"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent">
-    <include layout="@layout/key_panel"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_above="@id/subcontainer"
-        android:layout_alignWithParentIfMissing="true"/>
 
-    <include layout="@layout/editfrag"/>
+	<include
+		layout="@layout/key_panel"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_above="@id/subcontainer"
+		android:layout_alignWithParentIfMissing="true"/>
 
-    <ImageButton
-        android:src="@android:drawable/ic_menu_more"
-        android:tooltipText="@string/browse_files"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentRight="true"
-        android:layout_marginBottom="12dp"
-        android:layout_marginRight="12dp"
-        android:id="@id/show_list"
-        android:onClick="showList"
+	<include
+		layout="@layout/editfrag"/>
+
+	<ImageButton
+		android:src="@android:drawable/ic_menu_more"
+		android:tooltipText="@string/browse_files"
+		android:layout_width="wrap_content"
+		android:layout_height="wrap_content"
+		android:layout_alignParentRight="true"
+		android:layout_marginBottom="12dp"
+		android:layout_marginRight="12dp"
+		android:id="@id/show_list"
+		android:onClick="showList"
 		android:layout_alignParentBottom="true"/>
+
 	<LinearLayout
 		android:id="@id/subcontainer"
 		android:layout_width="match_parent"

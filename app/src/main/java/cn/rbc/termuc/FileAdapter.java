@@ -1,9 +1,9 @@
 package cn.rbc.termuc;
-import android.widget.*;
-import android.view.*;
 import android.content.*;
-import java.util.*;
+import android.view.*;
+import android.widget.*;
 import java.io.*;
+import java.util.*;
 
 public class FileAdapter extends BaseAdapter implements Comparator<File>, FileFilter
 {
