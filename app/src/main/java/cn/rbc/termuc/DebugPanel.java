@@ -199,7 +199,7 @@ TabHost.OnTabChangeListener {
         wm.addView(ctrlr, params);
     }
 
-    private void processMsg(@NonNull String line, BufferedReader rd) throws IOException {
+    private void processMsg(String line, BufferedReader rd) throws IOException {
         if (line.isEmpty())
             return;
         final StreamTokenizer st = new StreamTokenizer(new StringReader(line));
@@ -589,7 +589,7 @@ TabHost.OnTabChangeListener {
 
     static class Sender extends LinkedBlockingQueue<String> implements Runnable {
         private final Socket sock;
-        Sender(@NonNull Socket sock) {
+        Sender(Socket sock) {
             super();
             this.sock = sock;
         }
