@@ -275,7 +275,7 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
 
     @Override
     public boolean onDoubleTap(MotionEvent e) {
-		isCaretTouched = true;
+        isCaretTouched = true;
         int x = screenToViewX((int) e.getX());
         int y = screenToViewY((int) e.getY());
         int charOffset = mTextField.coordToCharIndex(x, y);

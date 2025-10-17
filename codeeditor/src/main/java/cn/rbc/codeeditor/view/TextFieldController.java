@@ -329,10 +329,7 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
     public void stopTextComposing() {
 		FreeScrollingTextField fld = field;
         InputMethodManager im = (InputMethodManager) fld.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-        // This is an overkill way to inform the InputMethod that the caret
-        // might have changed position and it should re-evaluate the
-        // caps mode to use.
-        im.restartInput(field);
+        im.updateSelection(fld, fld.getSelectionStart(), fld.getSelectionEnd(), 0, 0);
 		TextFieldInputConnection tf = fld.mInputConnection;
 
         if (tf != null && tf.isComposingStarted())

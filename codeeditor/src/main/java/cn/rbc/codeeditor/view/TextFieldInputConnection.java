@@ -32,6 +32,22 @@ public class TextFieldInputConnection extends BaseInputConnection {
     }
 
     @Override
+    public ExtractedText getExtractedText(ExtractedTextRequest request, int flags) {
+        ExtractedText et = new ExtractedText();
+        FreeScrollingTextField fld = textField;
+        if (fld.isSelectText()) {
+            et.flags |= et.FLAG_SELECTING;
+        }
+        et.text = fld.hDoc;
+        et.startOffset = 0;
+        et.selectionStart = fld.getSelectionStart();
+        et.selectionEnd = fld.getSelectionEnd();
+        et.partialStartOffset = -1;
+        et.partialEndOffset = -1;
+        return et;
+    }
+
+    @Override
     public boolean performContextMenuAction(int id) {
         switch (id) {
             case android.R.id.copy:
