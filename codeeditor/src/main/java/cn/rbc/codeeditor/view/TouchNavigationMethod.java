@@ -29,11 +29,11 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
      */
     protected static int TOUCH_SLOP;
     protected FreeScrollingTextField mTextField;
-    protected boolean isCaretTouched = false;
+    protected boolean isCaretTouched = false, mIsFastScrolling = false;
     private GestureDetector mGestureDetector;
     private float lastDist, lastSize;
     private float lastX, lastY;
-    private int fling;
+    private int fling, mThumbHeight;
 
     public TouchNavigationMethod(FreeScrollingTextField textField) {
         mTextField = textField;
@@ -58,7 +58,22 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
 
         if (field.isFlingScrolling()) {
             field.stopFlingScrolling();
-        } else if (field.isSelectText()) {
+        }
+        if (!mIsFastScrolling) {
+            int grabWidth = 4 * field.getVerticalScrollbarWidth();
+            if (field.getWidth() - grabWidth < e.getX()) {
+                computeThumbHeight();
+                field.awakeScrollBars();
+                int h = field.getHeight();
+                float scrollStart = ((float)field.getScrollY()) / (h + field.getMaxScrollY()) * h;
+                int thumbHeight = Math.max(h / 8, mThumbHeight);
+                if (Math.abs(e.getY() - scrollStart - thumbHeight / 2) < thumbHeight) {
+                    mIsFastScrolling = true;
+                    return true;
+                }
+            }
+        }
+        if (field.isSelectText()) {
             if (isNearChar(x, y, field.getSelectionStart())) {
                 field.focusSelectionStart();
                 field.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
@@ -73,6 +88,12 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
         if (isCaretTouched) field.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
 
         return true;
+    }
+
+    private void computeThumbHeight() {
+        FreeScrollingTextField fld = mTextField;
+        int height = fld.getHeight();
+        mThumbHeight = (int)((float)height * height / (height + fld.getMaxScrollY()));
     }
 
     @Override
@@ -123,6 +144,7 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
         mTextField.stopAutoScrollCaret();
         mTextField.mClipboardPanel.invalidateContentRect();
         isCaretTouched = false;
+        mIsFastScrolling = false;
         lastDist = 0;
         fling = 0;
         return true;
@@ -136,17 +158,21 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
         if (isCaretTouched) {
             dragCaret(e2);
         } else if (e2.getPointerCount() == 1) {
-            if (fling == 0)
-                if (Math.abs(distanceX) > Math.abs(distanceY))
-                    fling = 1;
-                else
-                    fling = -1;
-            if (fling == 1)
-                distanceY = 0;
-            else if (fling == -1)
-                distanceX = 0;
-
-            scrollView(distanceX, distanceY);
+            View fld = mTextField;
+            if (mIsFastScrolling) {
+                fld.scrollTo(fld.getScrollX(), (int)((e2.getY() / mThumbHeight - .5f) * fld.getHeight()));
+            } else {
+                if (fling == 0)
+                    if (Math.abs(distanceX) > Math.abs(distanceY))
+                        fling = 1;
+                    else
+                        fling = -1;
+                if (fling == 1)
+                    distanceY = 0;
+                else if (fling == -1)
+                    distanceX = 0;
+                fld.scrollBy((int)distanceX, (int)distanceY);
+            }
         }
 
         //TODO find out if ACTION_UP events are actually passed to onScroll
@@ -190,34 +216,9 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
         }
     }
 
-    private void scrollView(float distanceX, float distanceY) {
-        FreeScrollingTextField field = mTextField;
-        int newX = (int) distanceX + field.getScrollX();
-        int newY = (int) distanceY + field.getScrollY();
-
-        // If scrollX and scrollY are somehow more than the recommended
-        // max scroll values, use them as the new maximum
-        // Also take into account the size of the caret,
-        // which may extend beyond the text boundaries
-        int maxWidth = Math.max(field.getMaxScrollX(), field.getScrollX());
-        if (newX > maxWidth) {
-            newX = maxWidth;
-        } else if (newX < 0) {
-            newX = 0;
-        }
-
-        int maxHeight = Math.max(field.getMaxScrollY(), field.getScrollY());
-        if (newY > maxHeight) {
-            newY = maxHeight;
-        } else if (newY < 0) {
-            newY = 0;
-        }
-        field.scrollTo(newX, newY);
-    }
-
     @Override
     public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
-        if (!isCaretTouched) {
+        if (!isCaretTouched && !mIsFastScrolling) {
 
             if (fling == 1)
                 velocityY = 0;

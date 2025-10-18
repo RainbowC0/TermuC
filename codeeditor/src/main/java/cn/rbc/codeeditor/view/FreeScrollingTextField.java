@@ -1648,6 +1648,9 @@ DialogInterface.OnDismissListener, Runnable {
         }
     }
 
+    boolean awakeScrollBars() {
+        return awakenScrollBars();
+    }
     //---------------------------------------------------------------------
     //------------------------- Caret methods -----------------------------
 
