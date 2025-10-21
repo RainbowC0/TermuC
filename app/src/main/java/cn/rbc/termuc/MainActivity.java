@@ -284,7 +284,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 				if (id == R.id.run)
 					sb.append("${x[@]}");
 				else {
-					sb.append("/system/bin/nc -l -s 127.0.0.1 -p 48456 nice -n -20 gdb -q -i=mi -ret -tty `tty` --args ${x[@]} 2>/dev/null");
+					sb.append("/system/bin/toybox nc -l -s 127.0.0.1 -p 48456 nice -n -20 gdb -q -i=mi -ret -tty `tty` --args ${x[@]} 2>/dev/null");
 					String fn = f.getName();
 					Document dc = codeEditor.getText();
 					int l = dc.getMarksCount();

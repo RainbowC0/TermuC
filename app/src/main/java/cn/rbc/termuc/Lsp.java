@@ -33,7 +33,7 @@ public class Lsp extends Semaphore implements Runnable {
 
 	// In main thread
 	public void start(Context mC, Handler read) {
-		Utils.run(mC, "/system/bin/nc", new String[]{"-l", "-s", Application.lsp_host, "-p", Integer.toString(Application.lsp_port), "-w", "6", "nice", "-n", "-20", "clangd", "--header-insertion-decorators=0"}, Utils.ROOT.getAbsolutePath(), true);
+		Utils.run(mC, "/system/bin/toybox", new String[]{"nc", "-l", "-s", Application.lsp_host, "-p", Integer.toString(Application.lsp_port), "-w", "6", "nice", "-n", "-20", "clangd", "--header-insertion-decorators=0"}, Utils.ROOT.getAbsolutePath(), true);
 		mRead = read;
 		new Thread(this).start();
 		mExecutor.execute(new Runnable(){
