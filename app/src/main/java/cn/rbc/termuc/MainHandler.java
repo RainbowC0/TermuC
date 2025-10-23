@@ -166,18 +166,10 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 								stack.push(n);
 								break;
 							case URI:
+                                tmp3 = jr.nextString();
 								if (DG.equals(stack.peek())) {
-									String tag = Uri.parse(jr.nextString()).getPath();
-									jr.close();
-									Fragment f = ma.getFragmentManager().findFragmentByTag(tag);
-									if (f==null)
-										return;
-									TextEditor te = (TextEditor)f.getView();
-									ArrayList<ErrSpan> a = (ArrayList<ErrSpan>)tmp1;
-									Collections.sort(a, this);
-									te.getText().setDiag(a);
-									te.invalidate();
-									return;
+									updateDiag((String)tmp3, (List<ErrSpan>)tmp1);
+                                    return;
 								}
 								break;
 							case TEDIT:
@@ -278,7 +270,13 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 							case IT:
 								ma.getEditor().getAutoCompletePanel().update((ArrayList<ListItem>)tmp1);
 								return;
-							//case DG:
+							case DG:
+                                if (tmp3 instanceof String) {
+                                    jr.close();
+                                    updateDiag((String)tmp3, (List<ErrSpan>)tmp1);
+                                    return;
+                                }
+                                break;
 							case RESU:
 								jr.close();
 								TextEditor te = ma.getEditor();
@@ -315,4 +313,16 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 	public int compare(ErrSpan p1, ErrSpan p2) {
 		return p1.stl - p2.stl;
 	}
+
+    private void updateDiag(String uri, List<ErrSpan> list) {
+        String tag = Uri.parse(uri).getPath();
+        Fragment f = ma.getFragmentManager().findFragmentByTag(tag);
+        if (f==null)
+            return;
+        TextEditor te = (TextEditor)f.getView();
+        Collections.sort(list, this);
+        te.getText().setDiag(list);
+        te.invalidate();
+        return;
+    }
 }

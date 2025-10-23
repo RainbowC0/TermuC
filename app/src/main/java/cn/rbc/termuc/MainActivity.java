@@ -245,6 +245,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 		Menu _m = pm.getMenu();
 		transStr = adp.getItem(i - 1).name;
 		_m.add(Menu.NONE, R.id.delete, Menu.NONE, R.string.delete).setOnMenuItemClickListener(this);
+        _m.add(Menu.NONE, R.id.rename, Menu.NONE, R.string.rename).setOnMenuItemClickListener(this);
 		pm.show();
 		return true;
 	}
@@ -340,7 +341,22 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 			bd.setMessage(getString(R.string.confirm_delete, transStr));
 			bd.setPositiveButton(android.R.string.ok, this);
 			transZ = false;
-		} else {
+		} else if (id == R.id.rename) {
+            bd.setTitle(R.string.rename);
+            EditText ed = new EditText(this);
+            bd.setView(ed);
+            transTxV = ed;
+            ed.setLayoutParams(
+            new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ));
+            ed.setId(id);
+            ed.setText(transStr);
+            ed.selectAll();
+            bd.setPositiveButton(android.R.string.ok, this);
+            transZ = false;
+        } else {
 			bd.setTitle(R.string.new_);
             if (id == R.id.newfile) {
 			    EditText ed = new EditText(this);
@@ -659,6 +675,16 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 			toast(getString(R.string.open_failed));
 			return;
 		}
+        TextView tv = transTxV;
+        if (tv != null) {
+            transTxV = null;
+            CharSequence name = tv.getText();
+            if (name.length() > 0
+                && new File(pwd, transStr).renameTo(new File(pwd, name.toString()))) {
+                refresh();
+            }
+            return;
+        }
 		ProgressDialog pd = new ProgressDialog(MainActivity.this);
 		pd.setMessage(getString(R.string.deleting, transStr));
 		pd.setIndeterminate(true);
@@ -750,6 +776,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 	private final DialogInterface.OnClickListener onc = new DialogInterface.OnClickListener(){
 		public void onClick(DialogInterface p1, int p2) {
 			TextView tv = transTxV;
+            transTxV = null;
             String name = tv.getText().toString();
             if (name.isEmpty()) {
                 toast(getText(R.string.empty_name));
@@ -770,6 +797,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
                 return;
 			}
             View v = transV;
+            transV = null;
             String s = ((Spinner)v.findViewById(R.id.prj_temp)).getSelectedItem().toString();
             if (Utils.extractTemplate(MainActivity.this, s, f)) {
                 AssetManager am = getAssets();
@@ -789,7 +817,6 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 				prj = f;
 				refresh();
 			}
-            transV = null;
 		}
 	};
 

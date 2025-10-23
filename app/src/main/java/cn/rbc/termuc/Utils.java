@@ -58,6 +58,35 @@ public class Utils {
 		return false;
 	}
 
+    public static int readLine(BufferedInputStream inps, byte[] line) throws IOException {
+        int l = line.length, c;
+        inps.mark(l);
+        if ((c = inps.read()) == -1) return -1;
+        byte fr = (byte)c;
+        line[0] = fr;
+        for (int i=1; i<l; i++) {
+            if ((c = inps.read()) == -1 || ('\r' == fr && '\n' == c && i == i--)) {
+                l = i;
+                break;
+            }
+            line[i] = fr = (byte)c;
+        }
+        inps.reset();
+        inps.skip(l + 2);
+        return l;
+    }
+
+    public static boolean arrNEquals(byte[] arr1, byte[] arr2, int n) {
+        if (arr1.length < n || arr2.length < n)
+            throw new IndexOutOfBoundsException();
+        for (int i = 0; i < n; i++) {
+            if (arr1[i] != arr2[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
 	public static boolean removeFiles(File dir) {
 		File[] fl = dir.listFiles();
 		if (fl != null)

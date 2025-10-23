@@ -58,6 +58,7 @@
 	<string name="confirm_open">打开项目 %s？</string>
 	<string name="new_f">新建文件（夹）</string>
 	<string name="new_prj">新建项目</string>
+    <string name="rename">重命名</string>
 	<string name="find_">查找…</string>
 	<string name="next">下一个</string>
 	<string name="prev">上一个</string>

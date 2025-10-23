@@ -8,40 +8,35 @@
         android:id="@+id/debug_close"
         android:layout_height="40dp"
         android:layout_width="40dp"
-        style="?android:attr/buttonBarButtonStyle"
+        style="?android:attr/actionButtonStyle"
         android:src="@android:drawable/ic_menu_close_clear_cancel"
-        android:scaleType="centerInside"
         android:tooltipText="@string/close"/>
     <TextView
         android:id="@+id/debug_continue"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        style="?android:attr/buttonBarButtonStyle"
-        android:textSize="24dp"
+        style="@style/ctrlButton"
         android:text="\uEACF"
         android:tooltipText="@string/cont"/>
     <TextView
         android:id="@+id/debug_next"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        style="?android:attr/buttonBarButtonStyle"
-        android:textSize="24dp"
+        style="@style/ctrlButton"
         android:text="\uEAD6"
         android:tooltipText="@string/skip"/>
     <TextView
         android:id="@+id/debug_step"
         android:layout_width="40dp"
         android:layout_height="40dp"
-        style="?android:attr/buttonBarButtonStyle"
-        android:textSize="24dp"
+        style="@style/ctrlButton"
         android:text="\uEAD4"
         android:tooltipText="@string/step"/>
     <TextView
         android:id="@+id/debug_finish"
         android:layout_height="40dp"
         android:layout_width="40dp"
-        style="?android:attr/buttonBarButtonStyle"
-        android:textSize="24dp"
+        style="@style/ctrlButton"
         android:text="\uEAD5"
         android:tooltipText="@string/fini"/>
     <ImageView

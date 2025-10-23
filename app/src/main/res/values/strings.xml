@@ -58,6 +58,7 @@
 	<string name="confirm_open">Open project %s?</string>
 	<string name="new_f">New File/Folder</string>
 	<string name="new_prj">New Project</string>
+    <string name="rename">Rename</string>
 	<string name="find_">Find...</string>
 	<string name="next">Next</string>
 	<string name="prev">Prev</string>

@@ -74,22 +74,22 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter {
                 doc = Application.getInstance().load(pth);
                 editor.setTextSize(savedInstanceState.getInt(TS));
             }
+            int tp = type & TYPE_MASK;
+            if (tp == TYPE_C) {
+                C = "clang";
+                TextEditor.setLanguage(CLanguage.getInstance());
+            } else if (tp == TYPE_CPP) {
+                C = "clang++";
+                TextEditor.setLanguage(CppLanguage.getInstance());
+            } else {
+                C = null;
+                TextEditor.setLanguage(LanguageNonProg.getInstance());
+            }
             if (doc != null) {
                 doc.setMetrics(editor);
                 doc.resetRowTable();
                 editor.setDocument(doc);
             } else {
-                int tp = type & TYPE_MASK;
-                if (tp == TYPE_C) {
-                    C = "clang";
-                    TextEditor.setLanguage(CLanguage.getInstance());
-                } else if (tp == TYPE_CPP) {
-                    C = "clang++";
-                    TextEditor.setLanguage(CppLanguage.getInstance());
-                } else {
-                    C = null;
-                    TextEditor.setLanguage(LanguageNonProg.getInstance());
-                }
                 ma.setEditor(editor);
                 doc = load();
                 if (tp != TYPE_TXT && "s".equals(Application.completion))
@@ -192,7 +192,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter {
 
 	private void refresh() {
 		long mLast = fl.lastModified();
-		if (mLast > lastModified) {
+		if (mLast != lastModified) {
 			lastModified = mLast;
 			Builder bd = new Builder(getContext());
 			bd.setTitle(fl.getName());

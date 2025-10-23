@@ -134,21 +134,23 @@ public class ClipboardPanel implements ActionMode.Callback {
             @Override
             public boolean onCreateActionMode(ActionMode mode, Menu menu) {
                 _clipboardActionMode = mode;
+                FreeScrollingTextField fld = _textField;
+                boolean isSel = fld.getSelectionStart() != fld.getSelectionEnd();
                 menu.add(0, 0, 0, _context.getString(android.R.string.selectAll))
 					.setShowAsActionFlags(2)
 					.setAlphabeticShortcut('a');
                 menu.add(0, 1, 0, _context.getString(android.R.string.cut))
 					.setShowAsActionFlags(2)
-					.setAlphabeticShortcut('x');
+					.setAlphabeticShortcut('x').setEnabled(isSel);
                 menu.add(0, 2, 0, _context.getString(android.R.string.copy))
 					.setShowAsActionFlags(2)
-					.setAlphabeticShortcut('c');
+					.setAlphabeticShortcut('c').setEnabled(isSel);
                 menu.add(0, 3, 0, _context.getString(android.R.string.paste))
 					.setShowAsActionFlags(2)
 					.setAlphabeticShortcut('v');
                 menu.add(0, 4, 0, _context.getString(R.string.delete))
 					.setShowAsActionFlags(2)
-					.setAlphabeticShortcut('d');
+					.setAlphabeticShortcut('d').setEnabled(isSel);
 				menu.add(0, 5, 0, _context.getString(R.string.format))
 					.setShowAsActionFlags(2)
 					.setAlphabeticShortcut('f');
@@ -162,31 +164,7 @@ public class ClipboardPanel implements ActionMode.Callback {
 
             @Override
             public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
-                switch (item.getItemId()) {
-                    case 0:
-                        _textField.selectAll();
-                        break;
-                    case 1:
-                        _textField.cut();
-                        mode.finish();
-                        break;
-                    case 2:
-                        _textField.copy();
-                        mode.finish();
-                        break;
-                    case 3:
-                        _textField.paste();
-                        mode.finish();
-						break;
-                    case 4:
-                        _textField.delete();
-                        mode.finish();
-						break;
-					case 5:
-						_textField.format();
-						mode.finish();
-                }
-                return false;
+                return ClipboardPanel.this.onActionItemClicked(mode, item);
             }
 
             @Override
@@ -198,13 +176,19 @@ public class ClipboardPanel implements ActionMode.Callback {
 
             @Override
             public void onGetContentRect(ActionMode mode, View view, Rect outRect) {
-                Rect caret = _textField.getBoundingBox(_textField.getSelectionStart());
-                int x = _textField.getScrollX(), y = _textField.getScrollY();
+                FreeScrollingTextField fld = _textField;
+                Rect caret = fld.getBoundingBox(fld.getSelectionStart());
+                int x = fld.getScrollX(), y = fld.getScrollY();
 				caret.top -= y;
                 caret.bottom = Math.max(0, caret.bottom-y);
 				caret.left -= x;
                 caret.right -= x;
                 outRect.set(caret);
+                Menu menu = mode.getMenu();
+                boolean isSel = fld.getSelectionStart() != fld.getSelectionEnd();
+                menu.findItem(1).setEnabled(isSel);
+                menu.findItem(2).setEnabled(isSel);
+                menu.findItem(4).setEnabled(isSel);
             }
         };
 

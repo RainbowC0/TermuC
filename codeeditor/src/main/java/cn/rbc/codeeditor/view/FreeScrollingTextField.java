@@ -411,9 +411,9 @@ DialogInterface.OnDismissListener, Runnable {
        // xExtent = 0;
         x = Math.max(0, Math.min(getMaxScrollX(), x));
         y = Math.max(0, Math.min(getMaxScrollY(), y));
-        if (x != getScrollX() || y != getScrollY())
+        if (x != getScrollX() || y != getScrollY()) {
             super.scrollTo(x, y);
-        else {
+        } else {
             postInvalidate();
         }
         xExtent = 0;
@@ -458,7 +458,6 @@ DialogInterface.OnDismissListener, Runnable {
         mTopEdge = new EdgeEffect(mContext);
         mBottomEdge = new EdgeEffect(mContext);
         mRect = new RectF();
-        //mVerticalScrollBar = new RectF();
         setLongClickable(true);
         setFocusableInTouchMode(true);
         setHapticFeedbackEnabled(true);
@@ -981,7 +980,6 @@ DialogInterface.OnDismissListener, Runnable {
             mTextPaint.setColor(mColorScheme.getColor(Colorable.NON_PRINTING_GLYPH));
             canvas.drawLine(left, getScrollY(), left, getScrollY() + getHeight(), mTextPaint);
         }
-        //drawScrollBars(canvas);
     }
 
     // map spacing
@@ -1048,78 +1046,6 @@ DialogInterface.OnDismissListener, Runnable {
         drawTextBackground(canvas, mCaretX, paintY, mCaretX + mCursorWidth);
         mTextPaint.setColor(originalColor);
     }
-    /**
-     * Draw scroll bars and tracks
-     *
-     * @param canvas The canvas to draw
-     *
-	 private void drawScrollBars(Canvas canvas) {
-	 // if(!mEventHandler.shouldDrawScrollBar()){
-	 //    return;
-	 // }
-	 //        mVerticalScrollBar.setEmpty();
-	 /*if (getMaxScrollY() > getHeight() / 2) {
-	 //  drawScrollBarTrackVertical(canvas,10);
-	 }*
-	 if (getMaxScrollY() > getHeight() / 2) {
-	 //drawScrollBarVertical(canvas,10);
-	 }
-	 }
-
-	 /**
-     * Draw vertical scroll bar track
-     *
-     * @param canvas Canvas to draw
-     * @param width  The size of scroll bar,dp unit
-     *
-	 private void drawScrollBarTrackVertical(Canvas canvas, int width) {
-	 //  if(mEventHandler.holdVerticalScrollBar()) {
-	 float mDpUnit = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, Resources.getSystem().getDisplayMetrics()) / 2;
-
-	 mRect.right = getWidth();
-	 mRect.left = getWidth() - mDpUnit * width;
-	 mRect.top = 0;
-	 mRect.bottom = getScrollY() + getHeight();//длина скролбара
-	 drawColor(canvas, mColorScheme.getColor(Colorable.COMMENT), mRect);
-	 // }
-	 }
-
-	 /**
-     * Draw vertical scroll bar
-     *
-     * @param canvas Canvas to draw
-     * @param width  The size of scroll bar,dp unit
-     *
-	 private void drawScrollBarVertical(Canvas canvas, int width) {
-	 int page = getHeight();
-	 float mDpUnit = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 2, Resources.getSystem().getDisplayMetrics()) / 2;
-	 float all = getContentHeight() + getHeight() / 2;
-	 float length = page / all * getHeight();
-	 float topY;
-	 int a = getScrollY() + getHeight();
-	 if (length < mDpUnit * 30) {
-	 length = mDpUnit * 30;
-	 topY = (a + page / 2f) / all * (getHeight() - length);
-	 } else {
-	 topY = a / all * getHeight();
-	 }
-
-	 mRect.right = getWidth();
-	 mRect.left = getWidth() - mDpUnit * width;
-	 mRect.top = topY;
-	 mRect.bottom = topY + length;
-	 mVerticalScrollBar.set(mRect);
-	 drawColor(canvas, mColorScheme.getColor(Colorable.LINE_HIGHLIGHT), mRect);
-	 }
-
-	 private void drawColor(Canvas canvas, int color, RectF rect) {
-	 if (color != 0) {
-	 int originalColor = mTextPaint.getColor();
-	 mTextPaint.setColor(color);
-	 canvas.drawRect(rect, mTextPaint);
-	 mTextPaint.setColor(originalColor);
-	 }
-	 }*/
 
     @Override
     final public int getRowWidth() {
@@ -1362,7 +1288,9 @@ DialogInterface.OnDismissListener, Runnable {
             }
         } else
         // 默认情况在水滴移动到屏幕左右边缘时才开始滚动
-        if (charRight > (getScrollX() + getContentWidth()))
+        if (getContentWidth() == 0)
+            scrollBy = 0;
+        else if (charRight > (getScrollX() + getContentWidth()))
             scrollBy = charRight - getScrollX() - getContentWidth();
         else if (charLeft < getScrollX() + mAlphaWidth)
             scrollBy = charLeft - getScrollX() - mAlphaWidth;
@@ -1873,6 +1801,7 @@ DialogInterface.OnDismissListener, Runnable {
 
     public void selectAll() {
         mCtrlr.setSelectionRange(0, hDoc.length() - 1, false, true);
+        mClipboardPanel.invalidateContentRect();
     }
 
     public void setSelection(int beginPosition, int numChars) {

@@ -181,7 +181,6 @@ public class TextEditor extends FreeScrollingTextField {
 
     public void undo() {
         int newPosition = hDoc.undo();
-
         if (newPosition >= 0) {
             //TODO editor.setEdited(false);
             // if reached original condition of file

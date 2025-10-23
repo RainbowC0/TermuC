@@ -9,42 +9,30 @@ import java.net.*;
 import java.nio.charset.*;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.*;
 import org.json.*;
 
 import cn.rbc.codeeditor.util.Range;
 
-public class Lsp extends Semaphore implements Runnable {
+public class Lsp implements Runnable {
 	final static int INITIALIZE = 0, INITIALIZED = 1,
 	OPEN = 2, CLOSE = 3,
 	COMPLETION = 4, FIX = 5, CHANGE = 6, SAVE = 7, NOTI = 8, SIGN_HELP = 9,
 	ERROR = -1;
 	private final static String TAG = "LSP";
-	private final static byte[] CONTENTLEN = "Content-Length: ".getBytes(StandardCharsets.UTF_8);
+	private final static byte[] CONTENTLEN = "Content-Length: ".getBytes();
 	private int tp;
 	private Socket sk = new Socket();
-	private ExecutorService mExecutor = Executors.newSingleThreadExecutor();
+	private Sender mSndr = new Sender();
 	private char[] compTrigs = {}, sigTrigs = {};
-	private long mLastReceivedTime;
 	private Handler mRead;
-
-    public Lsp() {
-        super(0);
-    }
 
 	// In main thread
 	public void start(Context mC, Handler read) {
 		Utils.run(mC, "/system/bin/toybox", new String[]{"nc", "-l", "-s", Application.lsp_host, "-p", Integer.toString(Application.lsp_port), "-w", "6", "nice", "-n", "-20", "clangd", "--header-insertion-decorators=0"}, Utils.ROOT.getAbsolutePath(), true);
 		mRead = read;
 		new Thread(this).start();
-		mExecutor.execute(new Runnable(){
-			public void run() {
-                try {
-			        acquire();
-                } catch (InterruptedException ie) {
-                    ie.printStackTrace();
-                }
-			}
-		});
+        mSndr.clear();
 	}
 
 	public void end() {
@@ -72,47 +60,39 @@ public class Lsp extends Semaphore implements Runnable {
 				}
 				i++;
 			} while (i<=20 && isEnded());
-			release();
 			if (i>20)
 				throw new IOException("Connection failed");
-			InputStream is = sk.getInputStream();
-			byte[] b = new byte[16];
-			OUTER:	while (true) {
-				for (i=0;i<16;i++) {
-					int t = is.read();
-					if (t==-1)
-						break OUTER;
-					b[i] = (byte)t;
-				}
-				if (Arrays.equals(b, CONTENTLEN)) {
-					Message msg = new Message();
-					msg.what = tp;
-					int len = 0;
-					while (Character.isDigit(i = is.read()))
-						len = len * 10 + i - 48;
-					mLastReceivedTime = System.currentTimeMillis();
-					is.skip(3L);
-					byte[] strb = new byte[len];
-					for (i=0; i<len; i++)
-						strb[i] = (byte)is.read();
-					InputStream r = new ByteArrayInputStream(strb);
-					JsonReader limitInput = new JsonReader(new InputStreamReader(r, StandardCharsets.UTF_8));
-					msg.obj = limitInput;
-					mRead.sendMessage(msg);
-				}
-			}
-			is.close();
+            new Thread(mSndr).start();
+            BufferedInputStream br = new BufferedInputStream(sk.getInputStream());
+            final int ctlen = CONTENTLEN.length;
+            final byte[] lnbf = new byte[128];
+            while (true) {
+                int len = 0;
+                while ((i = Utils.readLine(br, lnbf)) > 0) {
+                    if (i > ctlen && Utils.arrNEquals(lnbf, CONTENTLEN, ctlen)) {
+                        len = Integer.parseInt(new String(lnbf, ctlen, i - ctlen));
+                    }
+                }
+                if (i < 0)
+                    break;
+                Message msg = new Message();
+                msg.what = tp;
+                byte[] strb = new byte[len];
+                for (i = 0; i < len;) {
+                    i += br.read(strb, i, len - i);
+                }
+                InputStream r = new ByteArrayInputStream(strb);
+                JsonReader limitInput = new JsonReader(new InputStreamReader(r, StandardCharsets.UTF_8));
+                msg.obj = limitInput;
+                mRead.sendMessage(msg);
+            }
 		} catch (Exception ioe) {
 			Log.e(TAG, ioe.getMessage());
 		}
 		mRead.sendEmptyMessage(ERROR);
 	}
 
-	public long lastReceivedTime() {
-		return mLastReceivedTime;
-	}
-
-	private static String wrap(String m, Object p, boolean req) {
+	protected static String wrap(String m, Object p, boolean req) {
 		StringBuilder s = new StringBuilder("{\"jsonrpc\":\"2.0\"");
 		if (req)
 			s.append(",\"id\":0");
@@ -132,7 +112,7 @@ public class Lsp extends Semaphore implements Runnable {
 			sb.append(JSONObject.quote(new File(root).toURI().toString()));
 		}
 		sb.append(",\"initializationOptions\":{\"fallbackFlags\":[\"-Wall\"]}}");
-		mExecutor.execute(new Send("initialize", sb.toString(), true));
+		mSndr.send("initialize", sb.toString(), true);
 	}
 
 	public void setCompTrigs(char[] c) {
@@ -162,7 +142,7 @@ public class Lsp extends Semaphore implements Runnable {
 
 	public void initialized() {
 		tp = INITIALIZED;
-		mExecutor.execute(new Send("initialized", new HashMap<>(), false));
+		mSndr.send("initialized", new HashMap<>(), false);
 	}
 
 	public void didClose(File f) {
@@ -171,7 +151,7 @@ public class Lsp extends Semaphore implements Runnable {
 		HashMap<String,HashMap<String,String>> k = new HashMap<>();
 		k.put("textDocument", m);
 		tp = CLOSE;
-		mExecutor.execute(new Send("textDocument/didClose", k, false));
+		mSndr.send("textDocument/didClose", k, false);
 	}
 
 	public void didOpen(File f, String lang, String ct) {
@@ -182,7 +162,7 @@ public class Lsp extends Semaphore implements Runnable {
 		m.append(JSONObject.quote(ct));
 		m.append("}}");
 		tp = OPEN;
-		mExecutor.execute(new Send("textDocument/didOpen", m.toString(), false));
+		mSndr.send("textDocument/didOpen", m.toString(), false);
 	}
 
 	public void didSave(File f) {
@@ -190,7 +170,7 @@ public class Lsp extends Semaphore implements Runnable {
 		s.append(JSONObject.quote(Uri.fromFile(f).toString()));
 		s.append("}}");
 		tp = SAVE;
-		mExecutor.execute(new Send("textDocument/didSave", s.toString(), false));
+		mSndr.send("textDocument/didSave", s.toString(), false);
 	}
 
 	public void didChange(File f, int version, String text) {
@@ -202,7 +182,7 @@ public class Lsp extends Semaphore implements Runnable {
 		sb.append(JSONObject.quote(text));
 		sb.append("}]}").toString();
 		tp = CHANGE;
-		mExecutor.execute(new Send("textDocument/didChange", sb.toString(), false));
+		mSndr.send("textDocument/didChange", sb.toString(), false);
 	}
 
 	public void didChange(File f, int version, List<Range> chs) {
@@ -228,7 +208,7 @@ public class Lsp extends Semaphore implements Runnable {
 		sb.setCharAt(sb.length()-1, ']');
 		sb.append('}');
 		tp = CHANGE;
-		mExecutor.execute(new Send("textDocument/didChange", sb.toString(), false));
+		mSndr.send("textDocument/didChange", sb.toString(), false);
 	}
 
 	public boolean completionTry(File f, int l, int c, char tgc) {
@@ -251,7 +231,7 @@ public class Lsp extends Semaphore implements Runnable {
 		sb.append("}}");
 		tp = COMPLETION;
 		//Log.d(TAG, sb.toString());
-		mExecutor.execute(new Send("textDocument/completion", sb.toString(), true));
+		mSndr.send("textDocument/completion", sb.toString(), true);
 		return true;
 	}
 
@@ -269,7 +249,7 @@ public class Lsp extends Semaphore implements Runnable {
         sb.append(retrig);
         sb.append("}}");
         tp = SIGN_HELP;
-        mExecutor.execute(new Send("textDocument/signatureHelp", sb.toString(), true));
+        mSndr.send("textDocument/signatureHelp", sb.toString(), true);
         return true;
     }
 
@@ -282,7 +262,7 @@ public class Lsp extends Semaphore implements Runnable {
 		sb.append(useSpace);
 		sb.append("}}");
 		//Log.d(TAG, sb.toString());
-		mExecutor.execute(new Send("textDocument/formatting", sb.toString(), true));
+		mSndr.send("textDocument/formatting", sb.toString(), true);
 	}
 
 	public void rangeFormatting(File fl, Range range, int tabSize, boolean useSpace) {
@@ -301,38 +281,49 @@ public class Lsp extends Semaphore implements Runnable {
 		sb.append(",\"insertSpaces\":");
 		sb.append(useSpace);
 		sb.append("}}");
-		mExecutor.execute(new Send("textDocument/rangeFormatting", sb.toString(), true));
+		mSndr.send("textDocument/rangeFormatting", sb.toString(), true);
 	}
 
 	public void shutdown() {
-		mExecutor.execute(new Send("shutdown", "{}", true));
+		mSndr.send("shutdown", "{}", true);
 	}
 
 	public void exit() {
-		mExecutor.execute(new Send("exit", "{}", false));
+		mSndr.send("exit", "{}", false);
 	}
 
 	public boolean isConnected() {
 		return sk.isConnected();
 	}
 
-	class Send implements Runnable {
-		private byte[] s;
-
-		public Send(String cmd, Object hm, boolean req) {
-			s = wrap(cmd, hm, req).getBytes(StandardCharsets.UTF_8);
+	class Sender extends LinkedBlockingQueue<byte[]> implements Runnable {
+		public void send(String cmd, Object hm, boolean req) {
+			offer(wrap(cmd, hm, req).getBytes(StandardCharsets.UTF_8));
 		}
 
 		public void run() {
 			try {
-				OutputStream ow = sk.getOutputStream();
-				ow.write(CONTENTLEN);
-				ow.write((s.length+"\r\n\r\n").getBytes(StandardCharsets.UTF_8));
-				ow.write(s);
-				ow.flush();
-			} catch (IOException ioe) {
+                OutputStream ow = sk.getOutputStream();
+                for (;;) {
+                    byte[] s = take();
+				    ow.write(CONTENTLEN);
+                    ow.write((s.length+"\r\n\r\n").getBytes());
+				    ow.write(s);
+				    ow.flush();
+                }
+			} catch (Exception ioe) {
 				ioe.printStackTrace();
-			}
+			} finally {
+                clear();
+            }
 		}
+
+        public Stream<byte[]> stream() {
+            return null;
+        }
+
+        public Stream<byte[]> parallelStream() {
+            return null;
+        }
 	}
 }
