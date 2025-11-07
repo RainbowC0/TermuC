@@ -195,6 +195,9 @@ public class TextFieldInputConnection extends BaseInputConnection {
 
     @Override
     public int getCursorCapsMode(int reqModes) {
+        if (!textField.isAutoCaps()) {
+            return 0;
+        }
         int capsMode = 0;
 
         // Ignore InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS; not used in TextWarrior

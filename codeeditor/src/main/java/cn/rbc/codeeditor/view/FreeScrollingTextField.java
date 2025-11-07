@@ -231,6 +231,7 @@ DialogInterface.OnDismissListener, Runnable {
     private boolean isTextChanged = false;
     private boolean isCaretScrolled = false;
 	private boolean useSpace = false;
+    private boolean isAutoCap = false;
     private final Runnable mScrollCaretDownTask = this;
     private final Runnable mScrollCaretUpTask = new Runnable() {
         @Override
@@ -1982,6 +1983,15 @@ DialogInterface.OnDismissListener, Runnable {
 	public boolean isUseSpace() {
 		return useSpace;
 	}
+
+    public void setAutoCaps(boolean enable) {
+        isAutoCap = enable;
+    }
+
+    public boolean isAutoCaps() {
+        return isAutoCap;
+    }
+
     /**
      * Enable/disable auto-indent
      */

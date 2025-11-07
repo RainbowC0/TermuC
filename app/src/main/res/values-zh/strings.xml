@@ -18,6 +18,7 @@
 	<string name="usespace">使用空格进行缩进</string>
 	<string name="tabsize">制表符大小（\\t）</string>
     <string name="keyboard_suggestion">允许键盘建议</string>
+    <string name="auto_caps">自动输入大写</string>
     <string name="compiler">编译器</string>
     <string name="cflags">编译选项</string>
 	<string name="run_">运行...</string>

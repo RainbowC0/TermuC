@@ -59,6 +59,11 @@
             android:title="@string/keyboard_suggestion"
             android:defaultValue="false"
             />
+        <CheckBoxPreference
+            android:key="autocaps"
+            android:title="@string/auto_caps"
+            android:defaultValue="false"
+            />
 	</PreferenceCategory>
 	<PreferenceCategory
 		android:title="@string/file_browser">

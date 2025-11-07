@@ -749,6 +749,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 						ed.setUseSpace(Application.usespace);
 						ed.setTabSpaces(Application.tabsize);
                         ed.setSuggestion(Application.suggestion);
+                        ed.setAutoCaps(Application.auto_caps);
 						int tp = f.type&EditFragment.TYPE_MASK;
 						if (chg && tp!=EditFragment.TYPE_TXT)
 							lsp.didOpen(f.getFile(), tp==EditFragment.TYPE_C?"c":"cpp", ed.getText().toString());

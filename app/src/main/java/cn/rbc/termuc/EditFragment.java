@@ -61,6 +61,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter {
 		editor.setUseSpace(Application.usespace);
 		editor.setTabSpaces(Application.tabsize);
         editor.setSuggestion(Application.suggestion);
+        editor.setAutoCaps(Application.auto_caps);
 		editor.setLayoutParams(new ViewGroup.LayoutParams(
 								   ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         editor.setOnEditedListener(ma);

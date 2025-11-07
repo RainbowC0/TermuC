@@ -18,6 +18,7 @@ public class Application extends android.app.Application {
 	KEY_USESPACE = "usespace",
 	KEY_TABSIZE = "tabsize",
     KEY_SUGGUESTION = "suggestion",
+    KEY_AUTOCAPS = "autocaps",
 	KEY_SHOW_HIDDEN = "showhidden",
 	KEY_CHECKAPP = "checkapp",
 	KEY_INITAPP = "initapp",
@@ -26,7 +27,7 @@ public class Application extends android.app.Application {
 	KEY_LSP_HOST = "lsphost",
 	KEY_LSP_PORT = "lspport";
 
-	public static boolean pure_mode, wordwrap, whitespace, show_hidden, usespace, suggestion;
+	public static boolean pure_mode, wordwrap, whitespace, show_hidden, usespace, suggestion, auto_caps;
 	public static String theme, font, cflags, completion, lsp_host;
 	public static int lsp_port, textsize, tabsize;
 
@@ -78,6 +79,7 @@ public class Application extends android.app.Application {
 		usespace = sp.getBoolean(KEY_USESPACE, false);
 		tabsize = Integer.parseInt(sp.getString(KEY_TABSIZE, "4"));
         suggestion = sp.getBoolean(KEY_SUGGUESTION, false);
+        auto_caps = sp.getBoolean(KEY_AUTOCAPS, false);
 		show_hidden = sp.getBoolean(KEY_SHOW_HIDDEN, true);
         cflags = sp.getString(KEY_CFLAGS, "-lm -Wall");
 		completion = sp.getString(KEY_COMPLETION, "s");
