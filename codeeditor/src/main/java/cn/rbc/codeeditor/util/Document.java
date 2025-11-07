@@ -189,7 +189,7 @@ public class Document extends TextBuffer implements Parcelable {
             if (startRow > 1) {
                 int k = _rowTable.get(startRow-1);
                 if (k==_gapEndIndex)
-                    k = _gapStartIndex;
+                    k = oldStart + displacement;
                 if (_contents[k-1] != Language.NEWLINE)
                     startRow--;
             }

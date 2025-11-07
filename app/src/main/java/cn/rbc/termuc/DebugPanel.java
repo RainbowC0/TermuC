@@ -494,11 +494,11 @@ TabHost.OnTabChangeListener {
     public boolean onTouch(View p1, MotionEvent ev) {
         switch (ev.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                startX = params.x - ev.getRawX();
+                startX = params.x + ev.getRawX();
                 startY = params.y - ev.getRawY();
                 break;
             case MotionEvent.ACTION_MOVE:
-                params.x = -(int)(ev.getRawX() + startX);
+                params.x = (int)(-ev.getRawX() + startX);
                 params.y = (int)(ev.getRawY() + startY);
                 wm.updateViewLayout(ctrlr, params);
                 break;

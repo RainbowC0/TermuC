@@ -7,8 +7,8 @@ android {
         applicationId "cn.rbc.termuc"
         minSdkVersion 21
         targetSdkVersion 31
-        versionCode 9
-        versionName "0.2.0"
+        versionCode 10
+        versionName "0.2.1"
     }
 
     buildTypes {

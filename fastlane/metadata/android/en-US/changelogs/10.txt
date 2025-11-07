@@ -1,0 +1,5 @@
+• Support fast-scrolling
+• Support horizontal navigation by SogouInput
+• Fix missing "/system/bin/nc" for Android 6/7
+• Support rename operation
+• Fix automatic capitalization for some input methods
