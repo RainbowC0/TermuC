@@ -59,7 +59,9 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 						Fragment f = fm.findFragmentByTag(ma.getTag(i));
 						if (f==null) continue;
 						TextEditor te = (TextEditor)f.getView();
-						te.getText().setDiag(null);
+						Document doc = te.getText();
+						doc.setDiag(null);
+						doc.setHighlights(null);
 						te.invalidate();
 					}
 				}
@@ -229,7 +231,7 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 								if (tmp2 instanceof ListItem)
 									((ListItem)tmp2).edits.addLast(_p);
 								else
-									((List)tmp2).add(0, _p);
+									((List)tmp2).add(_p);
 								break;
 							case TEDIT:
 								_p = (Edit)tmp3;
@@ -249,7 +251,7 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 									e.stc = sc;
 									e.enl = el + 1;
 									e.enc = ec;
-									((ArrayList<ErrSpan>)tmp1).add(e);
+									((List)tmp1).add(e);
 								}
 								break;
                             case SIGS:
@@ -279,22 +281,34 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
                                 break;
 							case RESU:
 								jr.close();
+								List<Edit> l = (List<Edit>)tmp2;
 								TextEditor te = ma.getEditor();
 								Document doc = te.getText();
-								doc.beginBatchEdit();
-								long tpl = System.nanoTime();
-								int mc = te.getCaretPosition();
-								for (Edit e:(List<Edit>)tmp2) {
-									doc.deleteAt(e.start, e.len, tpl);
-									doc.insertBefore(e.text.toCharArray(), e.start, tpl);
-									if (e.start + e.len <= mc)
-										mc += e.text.length() - e.len;
-									else if (e.start < mc)
-										mc = e.start + e.text.length();
+								if (l.size() > 0) {
+									if (l.get(0).text == null) {
+										doc.setHighlights(l);
+										te.invalidate();
+									} else {
+										doc.beginBatchEdit();
+										long tpl = System.nanoTime();
+										int mc = te.getCaretPosition();
+										for (int i=l.size()-1; i>=0; i--) {
+											Edit e = l.get(i);
+											doc.deleteAt(e.start, e.len, tpl);
+											doc.insertBefore(e.text.toCharArray(), e.start, tpl);
+											if (e.start + e.len <= mc)
+												mc += e.text.length() - e.len;
+											else if (e.start < mc)
+												mc = e.start + e.text.length();
+										}
+										doc.endBatchEdit();
+										te.moveCaret(mc);
+										te.mCtrlr.determineSpans();
+									}
+								} else if (doc.getHighlights() != null) {
+									doc.setHighlights(null);
+									te.invalidate();
 								}
-								doc.endBatchEdit();
-								te.moveCaret(mc);
-								te.mCtrlr.determineSpans();
 								return;
 						}
 						break;

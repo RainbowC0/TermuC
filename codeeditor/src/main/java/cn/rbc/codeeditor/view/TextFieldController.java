@@ -311,6 +311,7 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
             fld.invalidateCaretRow(); //new caret row
         }
         stopTextComposing();
+        fld.crtLis.updateCaret(fld.mCaretPosition);
     }
 
     /**

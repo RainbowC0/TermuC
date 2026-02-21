@@ -19,7 +19,7 @@ import cn.rbc.codeeditor.lang.Formatter;
 import cn.rbc.codeeditor.util.Range;
 
 public class EditFragment extends Fragment
-implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter {
+implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnCaretScrollListener {
 	public final static int
 	TYPE_C = 1,
 	TYPE_CPP = 2,
@@ -65,6 +65,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter {
 		editor.setLayoutParams(new ViewGroup.LayoutParams(
 								   ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         editor.setOnEditedListener(ma);
+        editor.addCaretListener(this);
         try {
             Document doc = null;
             if (savedInstanceState != null) {
@@ -114,6 +115,19 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter {
 	}
 
 	@Override
+	public void updateCaret(int caretIndex) {
+		Document text = ed.getText();
+		if (ed.isSelectText2()) {
+			text.setHighlights(null);
+			return;
+		}
+		Lsp ls = Application.getInstance().lsp;
+		int stl = text.findLineNumber(caretIndex);
+		int stc = caretIndex - text.getLineOffset(stl);
+		ls.documentHighlight(fl, stl, stc);
+	}
+
+	@Override
 	public void format(Document txt, int width) {
 		int start = ed.getSelectionStart(), end = ed.getSelectionEnd();
 		Lsp lsp = Application.getInstance().lsp;
@@ -146,6 +160,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter {
             return;
 		TextEditor editor = ed;
 		Document text = editor.getText();
+		text.setHighlights(null);
 		boolean wordwrap = editor.isWordWrap();
 		Range range = new Range();
 		if (wordwrap) {
@@ -154,7 +169,6 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter {
 		} else {
 			range.stl = text.findRowNumber(start);
 			range.stc = text.getRowOffset(range.stl);
-            android.util.Log.i("Lsp", range.stl + "," + start + "-" + range.stc);
 		}
 		range.stc = start - range.stc;
 		if (ins) { // insert

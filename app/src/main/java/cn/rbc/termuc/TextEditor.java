@@ -5,13 +5,14 @@ import android.graphics.*;
 import android.text.*;
 import android.util.*;
 import android.view.*;
+import cn.rbc.codeeditor.common.*;
 import cn.rbc.codeeditor.lang.*;
 import cn.rbc.codeeditor.util.*;
 import cn.rbc.codeeditor.view.*;
 import cn.rbc.codeeditor.view.autocomplete.*;
 import java.io.*;
 
-public class TextEditor extends FreeScrollingTextField {
+public class TextEditor extends FreeScrollingTextField implements OnCaretScrollListener {
     // private Document _inputtingDoc;
     // private boolean _isWordWrap;
     private Context mContext;
@@ -19,6 +20,7 @@ public class TextEditor extends FreeScrollingTextField {
     private int _index;
 	private Formatter mFormatter;
     private OnEditedListener mEditedListener;
+    private OnCaretScrollListener mCrtLis;
     //private boolean mDirty;
 
     /*
@@ -62,6 +64,7 @@ public class TextEditor extends FreeScrollingTextField {
         setAutoIndent(true);
         setUseGboard(true);
         setNavigationMethod(new YoyoNavigationMethod(this));
+        crtLis = this;
     }
 
     @Override
@@ -215,6 +218,17 @@ public class TextEditor extends FreeScrollingTextField {
     public void setOnEditedListener(OnEditedListener edlis) {
         mEditedListener = edlis;
     }
+
+
+    public void updateCaret(int caretIndex) {
+        ((YoyoNavigationMethod)mNavMethod).updateCaret(caretIndex);
+        if (mCrtLis != null)
+            mCrtLis.updateCaret(caretIndex);
+	}
+
+	public void addCaretListener(OnCaretScrollListener crtlis) {
+		mCrtLis = crtlis;
+	}
     /*
      public void open(String filename) {
      _lastSelectFile = filename;

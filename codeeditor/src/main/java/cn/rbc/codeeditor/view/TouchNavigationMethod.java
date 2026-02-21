@@ -28,7 +28,7 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
      * the point of interest itself
      */
     protected static int TOUCH_SLOP;
-    protected FreeScrollingTextField mTextField;
+    protected final FreeScrollingTextField mTextField;
     protected boolean isCaretTouched = false, mIsFastScrolling = false;
     private GestureDetector mGestureDetector;
     private float lastDist, lastSize;
@@ -41,11 +41,6 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
         mGestureDetector.setIsLongpressEnabled(true);
 		ViewConfiguration vc = ViewConfiguration.get(textField.getContext());
 		TOUCH_SLOP = vc.getScaledTouchSlop();
-    }
-
-    @SuppressWarnings("unused")
-    private TouchNavigationMethod() {
-        // do not invoke; always needs a valid mTextField
     }
 
     @Override

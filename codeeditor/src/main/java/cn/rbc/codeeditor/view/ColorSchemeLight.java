@@ -53,6 +53,7 @@ public class ColorSchemeLight extends ColorScheme {
 
 		//注释
 		setColor(Colorable.COMMENT, GREEN_LIGHT);
+		setColor(Colorable.HIGHLIGHT, 0x30aaaaaaaa);
 		/*
 		setColor(Colorable.FOREGROUND, OFF_BLACK);
 		setColor(Colorable.BACKGROUND, OFF_WHITE);

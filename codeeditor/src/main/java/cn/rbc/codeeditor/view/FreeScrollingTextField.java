@@ -836,6 +836,24 @@ DialogInterface.OnDismissListener, Runnable {
 			}
 			diag = diagList.get(idx++);
 		}
+		List<Edit> hls = hDoc.getHighlights();
+		int hidx, hlen;
+		Edit hl;
+		if (hls == null || hls.isEmpty()) {
+			hl = null;
+			hidx = 0;
+			hlen = 0;
+		} else {
+			hlen = hls.size();
+			hidx = 0;
+			do {
+				hl = hls.get(hidx);
+				if (hl.start+hl.len > currIndex) {
+					break;
+				}
+				hidx++;
+			} while (hidx < hlen);
+		}
 		int mHt = 1 + hDoc.findLineNumber(mCaretPosition);
 		int mI = hDoc.findMark(currLineNum);
 		if (mI < 0)
@@ -843,6 +861,7 @@ DialogInterface.OnDismissListener, Runnable {
 		// row by row
 		int rowEnd = 0;
         int endRowNum = Math.min(hDoc.getRowCount(), 1+getEndPaintRow(canvas));
+		boolean markedCaret = false;
         for (m = -1; currRowNum < endRowNum && currIndex < mL; currRowNum++) {
 			if (currLineNum != lastLineNum) {
 				if (showLN) {
@@ -915,6 +934,16 @@ DialogInterface.OnDismissListener, Runnable {
                             diag = diagList.get(idx++);
                     }
                 }
+				if (hidx < hlen) {
+					if (hl.start+hl.len == currIndex) {
+						int org = mTextPaint.getColor();
+						mTextPaint.setColor(mColorScheme.getColor(ColorScheme.Colorable.HIGHLIGHT));
+						drawTextBackground(canvas, paintX, paintY, r);
+						mTextPaint.setColor(org);
+						hidx++;
+						hl = hidx < hlen ? hls.get(hidx) : null;
+					}
+				}
                 //DLog.i("Lsp", i+","+c+","+rowEnd);
                 if (newState != currState
                         || reachSpanEnd && (newState&4)==0
@@ -938,11 +967,13 @@ DialogInterface.OnDismissListener, Runnable {
                     currState = newState;
                 }
                // if (i==rowEnd) break;
-                if (currIndex == mCaretPosition && i<rowEnd && isCursorVisible)
+                if (currIndex == mCaretPosition && i<rowEnd && isCursorVisible) {
                 //draw cursor
-                    drawCaret(canvas, r, paintY);
+                    markCaret(r, paintY);
+                    markedCaret = true;
                 //else if (currIndex + 1 == mCaretPosition)
                 //    mCaretSpan = currSpan;
+				}
                 /*if (i<rowEnd&& currIndex == hDoc._gapStartIndex) {
                     mTextPaint.setColor(0xffff0000);
                     canvas.drawLine(r, paintY, r, paintY-rowheight, mTextPaint);
@@ -974,6 +1005,10 @@ DialogInterface.OnDismissListener, Runnable {
                 xExtent = paintX;
             if (paintX > mLineMaxWidth)
                 mLineMaxWidth = paintX;
+            if (markedCaret) {
+                drawCaret(canvas);
+                markedCaret = false;
+            }
         }
         // end while
 		if (showLN) {
@@ -1037,15 +1072,19 @@ DialogInterface.OnDismissListener, Runnable {
 						mTextPaint);
     }
 
-    private void drawCaret(Canvas canvas, int paintX, int paintY) {
-        int originalColor = mTextPaint.getColor();
+    private void markCaret(int paintX, int paintY) {
         mCaretX = paintX - mCursorWidth / 2;
         mCaretY = paintY;
+    }
+
+    private void drawCaret(Canvas canvas) {
+        Paint pt = mTextPaint;
+        int originalColor = pt.getColor();
         int caretColor = mColorScheme.getColor(Colorable.CARET_DISABLED);
-        mTextPaint.setColor(caretColor);
+        pt.setColor(caretColor);
         // draw full caret
-        drawTextBackground(canvas, mCaretX, paintY, mCaretX + mCursorWidth);
-        mTextPaint.setColor(originalColor);
+        drawTextBackground(canvas, mCaretX, mCaretY, mCaretX + mCursorWidth);
+        pt.setColor(originalColor);
     }
 
     @Override

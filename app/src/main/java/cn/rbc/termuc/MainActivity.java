@@ -277,7 +277,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 					pth = pwd.getAbsolutePath();
 				} else {
 					sb = Project.buildEnvironment(f);
-					sb.append("x=$TMPDIR/termuc;find $o -maxdepth 1 -type f \\( -iname '*.so' -o ! -name '*.*' \\) -exec install -D {} $x \\;;x=(");
+					sb.append("x=$TMPDIR/termuc;find $o -maxdepth 1 -type f \\( -iname '*.so' -o ! -name '*.*' \\) -exec install -D -t $x {} \\;;x=(");
 					sb.append(Project.runCmd);
 					sb.append(") && ");
 					pth = Project.rootPath;

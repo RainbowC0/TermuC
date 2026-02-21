@@ -8,14 +8,11 @@
  */
 package cn.rbc.codeeditor.util;
 
-import cn.rbc.codeeditor.lang.Language;
-
-import java.util.List;
-import java.util.Vector;
-import java.util.stream.*;
 import cn.rbc.codeeditor.common.*;
-import android.text.*;
-import java.io.*;
+import cn.rbc.codeeditor.lang.*;
+import cn.rbc.codeeditor.view.autocomplete.*;
+import java.util.*;
+import java.util.stream.*;
 
 
 //TODO Have all methods work with charOffsets and move all gap handling to logicalToRealIndex()
@@ -38,6 +35,7 @@ public class TextBuffer implements CharSequence
 	protected List<Pair> _spans;
     protected int sgapIdx, sgapLen;
 	protected List<ErrSpan> _diag;
+	protected List<Edit> _hls;
 	protected GapIntSet _marks;
 
 	OnTextChangeListener _txLis;
@@ -676,6 +674,14 @@ public class TextBuffer implements CharSequence
 
 	public void setDiag(List<ErrSpan> diag) {
 		_diag = diag;
+	}
+
+	public void setHighlights(List<Edit> hls) {
+		_hls = hls;
+	}
+
+	public List<Edit> getHighlights() {
+		return _hls;
 	}
 	/**
 	 * Returns true if in batch edit mode

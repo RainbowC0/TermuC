@@ -30,13 +30,13 @@ public class YoyoNavigationMethod extends TouchNavigationMethod implements OnCar
 
         Context cont = textField.getContext();
         Paint paint = new Paint();
-        paint.setColor(mTextField.getColorScheme().getColor(ColorScheme.Colorable.CARET_BACKGROUND));
+        paint.setColor(textField.getColorScheme().getColor(ColorScheme.Colorable.CARET_BACKGROUND));
         paint.setAntiAlias(true);
         mYoyoPaint = paint;
 		mYoyoCaret = new Yoyo(cont);
 		mYoyoStart = new Yoyo(cont);
 		mYoyoEnd = new Yoyo(cont);
-        mTextField.setCaretListener(this);
+        textField.setCaretListener(this);
 	}
 
 	@Override
@@ -141,14 +141,8 @@ public class YoyoNavigationMethod extends TouchNavigationMethod implements OnCar
             Pair foundIndex = yoyo.findNearestChar(x/*(int) e.getX()*/, y/*(int) e.getY()*/);
             int newCaretIndex = foundIndex.first;
 
-            if (newCaretIndex >= 0) {
+            if (newCaretIndex >= 0 && newCaretIndex != field.mCaretPosition) {
                 field.moveCaret(newCaretIndex);
-                //snap the handle to the caret
-                Rect newCaretBounds = field.getBoundingBox(newCaretIndex);
-                int newX = newCaretBounds.left + field.getPaddingLeft();
-                int newY = newCaretBounds.bottom + field.getPaddingTop();
-
-                yoyo.attachYoyo(newX, newY);
             }
         }
 	}
@@ -156,22 +150,29 @@ public class YoyoNavigationMethod extends TouchNavigationMethod implements OnCar
     // 拖yoyo滴球滚动时，保证水滴球的坐标与光标一致
     @Override
     public void updateCaret(int caretIndex) {
-        if (caretIndex >= 0 && isCaretHandleTouched) {
+        if (caretIndex < 0) return;
+        Yoyo yoyo = null;
+        if (isCaretHandleTouched)
+            yoyo = mYoyoCaret;
+        else if (isStartHandleTouched)
+            yoyo = mYoyoStart;
+        else if (isEndHandleTouched)
+            yoyo = mYoyoEnd;
+        if (yoyo != null) {
             FreeScrollingTextField field = mTextField;
-            field.moveCaret(caretIndex);
             //snap the handle to the caret
             Rect newCaretBounds = field.getBoundingBox(caretIndex);
             int newX = newCaretBounds.left + field.getPaddingLeft();
             int newY = newCaretBounds.bottom + field.getPaddingTop();
-
-            mYoyoCaret.attachYoyo(newX, newY);
+            yoyo.attachYoyo(newX, newY);
         }
     }
 
 	@Override
 	public boolean onSingleTapUp(MotionEvent e) {
-        int x = (int) e.getX() + mTextField.getScrollX();
-		int y = (int) e.getY() + mTextField.getScrollY();
+		FreeScrollingTextField fld = mTextField;
+        int x = (int) e.getX() + fld.getScrollX();
+		int y = (int) e.getY() + fld.getScrollY();
 		
         //ignore taps on handle
 		if (mYoyoCaret.isInHandle(x, y) || mYoyoStart.isInHandle(x, y) || mYoyoEnd.isInHandle(x, y)) {
@@ -184,17 +185,17 @@ public class YoyoNavigationMethod extends TouchNavigationMethod implements OnCar
 
 	@Override
 	public boolean onDoubleTap(MotionEvent e) {
-        
-        int x = (int) e.getX() + mTextField.getScrollX();
-		int y = (int) e.getY() + mTextField.getScrollY();
+        FreeScrollingTextField fld = mTextField;
+        int x = (int) e.getX() + fld.getScrollX();
+		int y = (int) e.getY() + fld.getScrollY();
         
         // 如果之前有选择文本，则再次双击或者长按选择文本的区域，直接返回
         // 反之则会导致水滴错位
-        if(mTextField.isSelectText()) {
-            int strictCharOffset = mTextField.coordToCharIndexStrict(x, y);
-            if (mTextField.inSelectionRange(strictCharOffset) ||
-                isNearChar(x, y, mTextField.getSelectionStart()) ||
-                isNearChar(x, y, mTextField.getSelectionEnd())) {
+        if(fld.isSelectText()) {
+            int strictCharOffset = fld.coordToCharIndexStrict(x, y);
+            if (fld.inSelectionRange(strictCharOffset) ||
+                isNearChar(x, y, fld.getSelectionStart()) ||
+                isNearChar(x, y, fld.getSelectionEnd())) {
                 // do nothing
                 return true;
             }
@@ -202,7 +203,7 @@ public class YoyoNavigationMethod extends TouchNavigationMethod implements OnCar
         
 		//ignore taps on handle
 		if (mYoyoCaret.isInHandle(x, y)) {
-			mTextField.selectText(true);
+			fld.selectText(true);
 			return true;
 		} else if (mYoyoStart.isInHandle(x, y)) {
 			return true;
@@ -229,28 +230,27 @@ public class YoyoNavigationMethod extends TouchNavigationMethod implements OnCar
 	}
 
 	@Override
-	public void onTextDrawComplete(Canvas canvas) {		
-        if (!mTextField.isSelectText2()) {
+	public void onTextDrawComplete(Canvas canvas) {
+		FreeScrollingTextField fld = mTextField;
+        if (!fld.isSelectText2()) {
 			mYoyoCaret.show();
 			mYoyoStart.hide();
 			mYoyoEnd.hide();
 
 			if (!isCaretHandleTouched) {
-				Rect caret = mTextField.getBoundingBox(mTextField.getCaretPosition());
-				int x = caret.left + mTextField.getPaddingLeft();
-				int y = caret.bottom + mTextField.getPaddingTop();
+				Rect caret = fld.getBoundingBox(fld.getCaretPosition());
+				int x = caret.left + fld.getPaddingLeft();
+				int y = caret.bottom + fld.getPaddingTop();
 				mYoyoCaret.setRestingCoord(x, y);
 			}
             
-            /* 判断文本是否有改变，在输入或删除文本时，水滴不显
-            if(mTextField.getTextChanged()){
+            // 判断文本是否有改变，在输入或删除文本时，水滴不显
+            if(fld.getTextChanged()){
                 isShowYoyoCaret = false;
-                mTextField.setTextChanged(false);
-            } else {*/
-			    if (isShowYoyoCaret){
-				    mYoyoCaret.draw(canvas, isCaretHandleTouched);
-                }
-            isShowYoyoCaret = false; //added
+                fld.setTextChanged(false);
+            } else if (isShowYoyoCaret){
+				mYoyoCaret.draw(canvas, isCaretHandleTouched);
+            }
             
 		} else {
 			mYoyoCaret.hide();
@@ -258,14 +258,14 @@ public class YoyoNavigationMethod extends TouchNavigationMethod implements OnCar
 			mYoyoEnd.show();
            
 			if (!(isStartHandleTouched && isEndHandleTouched)) {
-				Rect caret = mTextField.getBoundingBox(mTextField.getSelectionStart());
-				int x = caret.left + mTextField.getPaddingLeft();
-				int y = caret.bottom + mTextField.getPaddingTop();
+				Rect caret = fld.getBoundingBox(fld.getSelectionStart());
+				int x = caret.left + fld.getPaddingLeft();
+				int y = caret.bottom + fld.getPaddingTop();
 				mYoyoStart.setRestingCoord(x, y);
 
-				Rect caret2 = mTextField.getBoundingBox(mTextField.getSelectionEnd());
-				int x2 = caret2.left + mTextField.getPaddingLeft();
-				int y2 = caret2.bottom + mTextField.getPaddingTop();
+				Rect caret2 = fld.getBoundingBox(fld.getSelectionEnd());
+				int x2 = caret2.left + fld.getPaddingLeft();
+				int y2 = caret2.bottom + fld.getPaddingTop();
 				mYoyoEnd.setRestingCoord(x2, y2);
 			}
 

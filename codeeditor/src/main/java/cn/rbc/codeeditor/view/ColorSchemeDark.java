@@ -23,6 +23,7 @@ public class ColorSchemeDark extends ColorScheme
 		setColor(NON_PRINTING_GLYPH, 0xFF686868);
 		setColor(LINE_HIGHLIGHT, 0x1E888888);
 		setColor(SELECTION_BACKGROUND, 0xFF505050);
+		setColor(HIGHLIGHT, 0x4E88888888);
 	}
 
 	public static ColorScheme getInstance() {

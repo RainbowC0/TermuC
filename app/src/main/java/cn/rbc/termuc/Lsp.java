@@ -284,6 +284,17 @@ public class Lsp implements Runnable {
 		mSndr.send("textDocument/rangeFormatting", sb.toString(), true);
 	}
 
+	public void documentHighlight(File fl, int l, int c) {
+		StringBuilder sb = new StringBuilder("{\"textDocument\":{\"uri\":");
+		sb.append(JSONObject.quote(Uri.fromFile(fl).toString()));
+		sb.append("},\"position\":{\"line\":");
+		sb.append(l);
+		sb.append(",\"character\":");
+		sb.append(c);
+		sb.append("}}");
+		mSndr.send("textDocument/documentHighlight", sb.toString(), true);
+	}
+
 	public void shutdown() {
 		mSndr.send("shutdown", "{}", true);
 	}
