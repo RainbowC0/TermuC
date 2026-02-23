@@ -24,7 +24,8 @@ public class Project
 	}
 
 	public static void load(File conf, List<String> opens) throws IOException {
-		JsonReader p = new JsonReader((new BufferedReader(new FileReader(conf))));
+		InputStreamReader ir = new InputStreamReader(FileHelper.openInputStream(conf));
+		JsonReader p = new JsonReader((new BufferedReader(ir)));
 		p.beginObject();
 		setDefault();
 		while (p.hasNext()) {
@@ -50,7 +51,7 @@ public class Project
 		p.endObject();
 		p.close();
 		rootPath = conf.getParent();
-		lastModified = conf.lastModified();
+		lastModified = FileHelper.lastModified(conf);
 	}
 
 	public static boolean save(Iterable<String> opens) {
@@ -58,7 +59,8 @@ public class Project
 			return false;
 		File f = new File(rootPath, PROJ);
         try {
-			JsonWriter w = new JsonWriter(new BufferedWriter(new FileWriter(f)));
+			OutputStreamWriter ow = new OutputStreamWriter(FileHelper.openOutputStream(f));
+			JsonWriter w = new JsonWriter(new BufferedWriter(ow));
 			w.setIndent("  ");
 			w.beginObject();
 			w.name(KEY_BUILDCMD);w.value(buildCmd);
@@ -73,9 +75,10 @@ public class Project
 			w.endArray();
 			w.endObject();
 			w.close();
-			lastModified = f.lastModified();
+			lastModified = FileHelper.lastModified(f);
 			return true;
 		} catch (IOException e) {
+			e.printStackTrace();
 			return false;
 		}
 	}
@@ -83,8 +86,14 @@ public class Project
 	public static boolean create(File f) {
 		rootPath = f.getAbsolutePath();
 		setDefault();
-		new File(f, outputDir).mkdirs();
-		return save(null);
+		try {
+			return FileHelper.createFile(f, true)
+			&& FileHelper.createFile(new File(f, outputDir), true)
+			&& save(null);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return false;
+		}
 	}
 
 	public static void close() {
@@ -97,7 +106,7 @@ public class Project
 
 	public static void reload() throws IOException {
 		File f = new File(rootPath, PROJ);
-		if (f.lastModified()>lastModified)
+		if (FileHelper.lastModified(f)>lastModified)
 			load(f, null);
 	}
 	/**

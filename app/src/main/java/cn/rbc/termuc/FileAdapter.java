@@ -4,12 +4,15 @@ import android.view.*;
 import android.widget.*;
 import java.io.*;
 import java.util.*;
+import android.net.*;
+import android.provider.*;
+import android.database.*;
 
-public class FileAdapter extends BaseAdapter implements Comparator<File>, FileFilter
+public class FileAdapter extends BaseAdapter implements Comparator<FileItem>, FileFilter
 {
 	private Context mCont;
 	private static FileItem parent;
-	private FileItem[] mData;
+	private List<FileItem> mData;
 	private boolean mNRoot;
 	private File mPath;
 	private LayoutInflater mInflater;
@@ -38,12 +41,12 @@ public class FileAdapter extends BaseAdapter implements Comparator<File>, FileFi
 			if (p1==0) return parent;
 			else p1--;
 		}
-		return mData[p1];
+		return mData.get(p1);
 	}
 
 	@Override
 	public int getCount() {
-		return mNRoot ? mData.length+1 : mData.length;
+		return mNRoot ? mData.size()+1 : mData.size();
 	}
 
 	@Override
@@ -71,49 +74,33 @@ public class FileAdapter extends BaseAdapter implements Comparator<File>, FileFi
 	}
 
 	public void setPath(File path) {
-		mNRoot = !Utils.ROOT.equals(path);
+		if (FileHelper.isTermuxFile(path)) {
+			Uri uri = Application.getInstance().treeUri;
+			String root = DocumentsContract.getTreeDocumentId(uri);
+			mNRoot = !root.equals(path.getAbsolutePath());
+		} else {
+			mNRoot = !Utils.ROOT.equals(path);
+		}
 		if (parent==null && mNRoot)
 			parent = new FileItem(R.drawable.ic_folder_24, "..");
 		mPath = path;
-		File[] lst = path.listFiles(this);
-		if (lst==null)
-			lst = new File[0];
-		Arrays.sort(lst, this);
-		mData = new FileItem[lst.length];
-		for (int i=0,l=lst.length;i<l;i++) {
-			File f = lst[i];
-			mData[i] = new FileItem(computeIcon(f), f.getName());
-		}
+		mData = FileHelper.lists(path, this);
+		Collections.sort(mData, this);
 	}
 
-	public int compare(File a, File b) {
-		boolean ad=a.isDirectory(), bd=b.isDirectory();
+	public int compare(FileItem a, FileItem b) {
+		boolean ad=(a.icon==R.drawable.ic_folder_24), bd=(b.icon==R.drawable.ic_folder_24);
 		return ad==bd?
-			a.getName().compareToIgnoreCase(b.getName())
+			a.name.compareToIgnoreCase(b.name)
 			:ad?-1:1;
 	}
 
 	public boolean accept(File p1) {
 		FileFilter ff;
-		return (Application.show_hidden || p1.getName().charAt(0) != '.') && ((ff=mFilter)==null || ff.accept(p1));
+		return (Application.show_hidden || !p1.isHidden()) && ((ff=mFilter)==null || ff.accept(p1));
 	}
 
-	private static int computeIcon(File f) {
-		if (f.isDirectory())
-			return R.drawable.ic_folder_24;
-		else {
-			String n = f.getName();
-			if (n.endsWith(".c")||isCpp(n)
-				||n.endsWith(".h")||n.endsWith(".hpp"))
-				return R.drawable.ic_code_24;
-		}
-		return R.drawable.ic_file_24;
-	}
-
-	public final static boolean isCpp(String name) {
-		return name.endsWith(".cpp") || name.endsWith(".cxx") || name.endsWith(".cc");
-	}
-
+	
     static class ViewHolder {
         ImageView img;
         TextView txv;

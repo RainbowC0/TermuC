@@ -106,7 +106,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 				editor.setFormatter(this);
 			editor.setAutoComplete("l".equals(Application.completion));
 		}
-		lastModified = fl.lastModified();
+		lastModified = FileHelper.lastModified(fl);
 		return editor;
 	}
 
@@ -206,7 +206,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	}
 
 	private void refresh() {
-		long mLast = fl.lastModified();
+		long mLast = FileHelper.lastModified(fl);
 		if (mLast != lastModified) {
 			lastModified = mLast;
 			Builder bd = new Builder(getContext());
@@ -264,7 +264,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	}
 
 	public void save() throws IOException {
-        Writer writer = new FileWriter(fl);
+        Writer writer = new OutputStreamWriter(FileHelper.openOutputStream(fl));
         Document doc = ed.getText();
         doc.markVersion();
         Reader rd = new CharSeqReader(doc);
@@ -275,12 +275,12 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         }
         rd.close();
         writer.close();
-        lastModified = fl.lastModified();
+        lastModified = FileHelper.lastModified(fl);
         ed.setEdited(doc.getMarkedVersion() != doc.getCurrentVersion());
     }
 
 	public Document load() throws IOException {
-		Reader fr = new FileReader(fl);
+		Reader fr = new InputStreamReader(FileHelper.openInputStream(fl));
 		char[] buf = new char[1024];
         int i;
         Document doc = ed.getText();
@@ -308,7 +308,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 		int _tp;
 		if (_it.endsWith(".c"))
 			_tp = TYPE_C;
-		else if (FileAdapter.isCpp(_it))
+		else if (FileHelper.isCpp(_it))
 			_tp = TYPE_CPP;
 		else if (_it.endsWith(".h") || _it.endsWith(".hpp"))
 			_tp = TYPE_CPP | TYPE_HEADER;

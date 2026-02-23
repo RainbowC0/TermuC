@@ -45,6 +45,9 @@
 	<string name="lsp_port">服务器端口</string>
 	<string name="file_modified">文件 %s 已被修改，您是否需要重新加载？</string>
 	<string name="confirm_delete">是否删除 %s？</string>
+	<string name="external_storage">外部存储</string>
+	<string name="termux_storage">Termux 存储</string>
+	<string name="not_termux_dir">不是 Termux 存储目录！</string>
 	<string name="new_">新建</string>
 	<string name="file">文件</string>
 	<string name="folder">文件夹</string>
@@ -60,6 +63,7 @@
 	<string name="new_f">新建文件（夹）</string>
 	<string name="new_prj">新建项目</string>
     <string name="rename">重命名</string>
+	<string name="rename_failed">重命名失败！</string>
 	<string name="find_">查找…</string>
 	<string name="next">下一个</string>
 	<string name="prev">上一个</string>

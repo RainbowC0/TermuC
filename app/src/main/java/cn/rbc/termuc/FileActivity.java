@@ -89,7 +89,7 @@ implements ListView.OnItemClickListener, FileFilter
 
 	@Override
 	public void onBackPressed() {
-		if (Utils.ROOT.compareTo(pwd)==0)
+		if (Utils.ROOT.equals(pwd))
 			super.onBackPressed();
 		else {
 			pwd = pwd.getParentFile();

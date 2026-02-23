@@ -394,10 +394,9 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
         else {
             // unhighlight caret
             fld.invalidateCaretRow();
+            _isInSelectionMode = true;
             if (mode)
-                setSelectText(true);
-            else
-                _isInSelectionMode = true;
+                _isInSelectionMode2 = true;
         }
 
         fld.mCaretPosition = fld.mSelectionEdge = (fld.mSelectionAnchor=beginPosition) + numChars;

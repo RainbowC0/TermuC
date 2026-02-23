@@ -11,7 +11,6 @@ import android.view.*;
 import android.widget.*;
 import cn.rbc.codeeditor.util.*;
 import java.io.*;
-import java.nio.channels.*;
 
 public class Utils {
 	public final static File ROOT = Environment.getExternalStorageDirectory();
@@ -40,11 +39,11 @@ public class Utils {
     }
 
 	public static boolean isBlob(File f) {
-		int i = Math.min((int)f.length(), 2048);
+		int i = FileHelper.isTermuxFile(f) ? 2048 : Math.min((int)f.length(), 2048);
 		try {
-			FileInputStream file = new FileInputStream(f);
+			InputStream file = FileHelper.openInputStream(f);
 			byte[] bArr = new byte[i];
-			new DataInputStream(file).readFully(bArr);
+			i = file.read(bArr);
 			for (int i2 = 0; i2 < i; i2++) {
 				if (bArr[i2] == 0) {
 					file.close();
@@ -87,14 +86,7 @@ public class Utils {
         return true;
     }
 
-	public static boolean removeFiles(File dir) {
-		File[] fl = dir.listFiles();
-		if (fl != null)
-			for (File f:fl)
-				removeFiles(f);
-		return dir.delete();
-	}
-
+	
 	public static void testApp(Activity ctx, boolean manually) {
 		PackageManager pm = ctx.getPackageManager();
 		try {
@@ -201,8 +193,11 @@ public class Utils {
     public static boolean extractTemplate(Context ctx, String type, File des) {
         if ("Clang".equals(type))
             return Project.create(des);
-        if (!des.isDirectory())
-            des.mkdir();
+        if (!FileHelper.isDirectory(des))
+            try {
+				FileHelper.createFile(des, true);
+			} catch (IOException e) {
+			}
         AssetManager am = ctx.getAssets();
         try {
             String[] temps = am.list(type);
@@ -219,11 +214,14 @@ public class Utils {
     }
 
     public static void dumpFile(InputStream is, File f) throws IOException {
-        FileChannel os = new FileOutputStream(f).getChannel();
-        ReadableByteChannel rbc = Channels.newChannel(is);
-        os.transferFrom(rbc, 0, is.available());
-        os.close();
+        OutputStream os = FileHelper.openOutputStream(f);
+        byte[] buf = new byte[2048];
+        int i;
+        while ((i = is.read(buf)) > 0) {
+            os.write(buf, 0, i);
+        }
         is.close();
+        os.close();
     }
 
     public static void setNightMode(Context ctx, String thm) {

@@ -170,10 +170,6 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
             }
         }
 
-        //TODO find out if ACTION_UP events are actually passed to onScroll
-        if ((e2.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
-            onUp(e2);
-        }
         return true;
     }
 
@@ -293,7 +289,6 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
             if (start != charOffset)
                 start++;
             for (end = charOffset; Character.isJavaIdentifierPart(doc.charAt(end)); end++);
-            field.selectText(true);
             field.setSelectionRange(start, end - start);
             // toast err msg
             List<ErrSpan> dg = doc.getDiag();

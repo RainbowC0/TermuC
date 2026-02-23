@@ -13,4 +13,6 @@
 	<item type="id" name="debug"/>
 	<item type="id" name="build"/>
 	<item type="id" name="compile"/>
+	<item type="id" name="exstorage"/>
+	<item type="id" name="tmxstorage"/>
 </resources>

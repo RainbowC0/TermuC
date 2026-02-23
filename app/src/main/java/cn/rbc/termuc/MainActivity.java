@@ -30,14 +30,14 @@ AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener,
 DialogInterface.OnClickListener, MenuItem.OnMenuItemClickListener,
 TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 
-	public final static int SETTING = 0, ACCESS_FILE = 1, SHOW_FLOATING = 2;
+	public final static int SETTING = 0, ACCESS_FILE = 1, SHOW_FLOATING = 2, REQ_FOLDER = 3;
 	public final static String PWD = "p", SHOWLIST = "l", FILES = "o", TESTAPP = "t", INITAPP = "i";
 	private HeaderAdapter hda;
 	private FileAdapter adp;
 	private EditFragment lastFrag = null;
 	private boolean byhand = true, keyboardShown = false, transZ;
     private View keys, showlist, transV;
-    private File pwd, prj;
+    private File pwd, prj, root;
     private TextView pwdpth, msgEmpty, transTxV;
     private LinearLayout subc;
     private TextEditor codeEditor;
@@ -52,13 +52,18 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 
 	private void envInit(SharedPreferences pref) {
 		pwd = new File(pref.getString(PWD, Utils.ROOT.getPath()));
-		for (File f = pwd; !f.equals(Utils.ROOT); f = f.getParentFile()) {
-			if (new File(f, Project.PROJ).isFile()) {
+		Application app = Application.getInstance();
+		if (app.treeUri != null && FileHelper.isTermuxFile(pwd)) {
+			root = new File(DocumentsContract.getTreeDocumentId(app.treeUri));
+		} else {
+			root = Utils.ROOT;
+		}
+		for (File f = pwd; !f.equals(root); f = f.getParentFile()) {
+			if (FileHelper.isFile(new File(f, Project.PROJ))) {
 				prj = f;
 				break;
 			}
 		}
-        Application app = Application.getInstance();
 		if (app.lsp == null) {
             app.lsp = new Lsp();
 			app.hand = new MainHandler(this);
@@ -219,19 +224,19 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 	public void onItemClick(AdapterView<?> av, View v, int i, long n) {
 		String _it = adp.getItem(i - 1).name;
 		if ("..".equals(_it)) {
-			if (new File(pwd, Project.PROJ).isFile())
+			if (FileHelper.isFile(new File(pwd, Project.PROJ)))
 				prj = null;
 			pwd = pwd.getParentFile();
 		} else {
 			File f = new File(pwd, _it);
-			if (f.isFile()) {
+			if (FileHelper.isFile(f)) {
 				transStr = openFile(f) ? f.getAbsolutePath() : null;
 				if (Project.rootPath == null && prj!=null)
 					openProject();
 				return;
 			}
 			File trj = new File(f, Project.PROJ);
-			if (trj.isFile())
+			if (FileHelper.isFile(trj))
 				prj = f;
 			pwd = f;
 		}
@@ -332,6 +337,22 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 				toast(getString(R.string.parse_failed));
 			} catch(IOException ioe) {
 				Log.e("LSP", ioe.getMessage());
+			}
+			return true;
+		} else if (id == R.id.exstorage) {
+			pwd = root = Utils.ROOT;
+			prj = null;
+			refresh();
+			return true;
+		} else if (id == R.id.tmxstorage) {
+			Uri u = Application.getInstance().treeUri;
+			if (u == null) {
+				Intent it = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+				startActivityForResult(it, REQ_FOLDER);
+			} else {
+				pwd = root = new File(DocumentsContract.getTreeDocumentId(u));
+				prj = null;
+				refresh();
 			}
 			return true;
 		}
@@ -463,7 +484,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 				continue;
 			}
 			File f = new File(i);
-			if (f.isFile() && (tp = EditFragment.fileType(f)) >= 0) {
+			if (FileHelper.isFile(f) && (tp = EditFragment.fileType(f)) >= 0) {
 				ef = new EditFragment(f, tp);
 				fts.add(R.id.editFrag, ef, i);
 				fts.hide(ef);
@@ -565,6 +586,14 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
         closePage((Integer)p1.getTag());
     }
 
+	public void popStorage(View v) {
+		PopupMenu pm = new PopupMenu(this, ((View)v.getParent()));
+		Menu m = pm.getMenu();
+		m.add(Menu.NONE, R.id.exstorage, Menu.NONE, R.string.external_storage).setOnMenuItemClickListener(this);
+		m.add(Menu.NONE, R.id.tmxstorage, Menu.NONE, R.string.termux_storage).setOnMenuItemClickListener(this);
+		pm.show();
+	}
+
     private void closePage(int pos) {
         String _t = hda.getItem(pos);
         hda.remove(_t);
@@ -660,7 +689,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 	public void onClick(DialogInterface di, int id) {
 		if (transZ) {
 			File c = new File(prj, Project.PROJ);
-			if (c.isFile()) {
+			if (FileHelper.isFile(c)) {
 				try {
 					List<String> opens = new ArrayList<>();
 					Project.load(c, opens);
@@ -680,9 +709,11 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
             transTxV = null;
             CharSequence name = tv.getText();
             if (name.length() > 0
-                && new File(pwd, transStr).renameTo(new File(pwd, name.toString()))) {
+                && FileHelper.rename(new File(pwd, transStr), name.toString())) {
                 refresh();
-            }
+            } else {
+				toast(getString(R.string.rename_failed));
+			}
             return;
         }
 		ProgressDialog pd = new ProgressDialog(MainActivity.this);
@@ -695,7 +726,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 
 	public void run() {
 		if (Looper.myLooper() != Looper.getMainLooper()) {
-			transZ = Utils.removeFiles(new File(pwd, transStr));
+			transZ = FileHelper.removeFiles(new File(pwd, transStr));
 			runOnUiThread(this);
 		} else {
 			if (transZ) {
@@ -771,6 +802,19 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 					toast(getString(R.string.request_failed));
 				}
                 break;
+			case REQ_FOLDER:
+				if (resultCode == RESULT_OK) {
+					Uri dat = data.getData();
+					File tmxfile = new File(DocumentsContract.getTreeDocumentId(dat));
+					if (FileHelper.isTermuxFile(tmxfile)) {
+						getContentResolver().takePersistableUriPermission(dat, Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+						Application.getInstance().saveTermuxUri(dat);
+						pwd = tmxfile;
+						refresh();
+					} else
+						toast(getString(R.string.not_termux_dir));
+				}
+				break;
 		}
 	}
 
@@ -786,10 +830,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 			File f = new File(pwd, name);
 			if (tv.getId() == R.id.newfile) {
 				try {
-					if (p2 == DialogInterface.BUTTON_POSITIVE)
-						f.createNewFile();
-					else
-						f.mkdir();
+					FileHelper.createFile(f, p2 == DialogInterface.BUTTON_NEUTRAL);
 					refresh();
 				} catch (IOException e) {
 					e.printStackTrace();

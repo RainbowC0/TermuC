@@ -5,6 +5,7 @@ import android.preference.*;
 import android.util.*;
 import cn.rbc.codeeditor.util.*;
 import java.util.*;
+import android.net.*;
 
 public class Application extends android.app.Application {
 	final static String
@@ -25,7 +26,8 @@ public class Application extends android.app.Application {
 	KEY_CFLAGS = "cflags",
 	KEY_COMPLETION = "completion",
 	KEY_LSP_HOST = "lsphost",
-	KEY_LSP_PORT = "lspport";
+	KEY_LSP_PORT = "lspport",
+	KEY_TERMUX_URI = "_termux_uri";
 
 	public static boolean pure_mode, wordwrap, whitespace, show_hidden, usespace, suggestion, auto_caps;
 	public static String theme, font, cflags, completion, lsp_host;
@@ -33,6 +35,7 @@ public class Application extends android.app.Application {
 
     MainHandler hand;
     Lsp lsp;
+    Uri treeUri;
     private Map<String,Document> ls;
     private static Application app;
 
@@ -65,6 +68,13 @@ public class Application extends android.app.Application {
         return app;
     }
 
+	void saveTermuxUri(Uri uri) {
+		treeUri = uri;
+		SharedPreferences.Editor se = PreferenceManager.getDefaultSharedPreferences(this).edit();
+		se.putString(KEY_TERMUX_URI, uri.toString());
+		se.commit();
+	}
+
     private void initConfs() {
 		SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         theme = sp.getString(KEY_THEME, getResources().getString(R.string.def_thm));
@@ -85,6 +95,9 @@ public class Application extends android.app.Application {
 		completion = sp.getString(KEY_COMPLETION, "s");
 		lsp_host = sp.getString(KEY_LSP_HOST, "127.0.0.1");
 		lsp_port = Integer.parseInt(sp.getString(KEY_LSP_PORT, "48455"));
+		String uri = sp.getString(KEY_TERMUX_URI, "");
+		if (!uri.isEmpty())
+			treeUri = Uri.parse(uri);
     }
 
 	static Typeface typeface() {

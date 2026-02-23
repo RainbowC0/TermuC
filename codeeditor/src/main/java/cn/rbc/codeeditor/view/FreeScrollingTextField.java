@@ -913,13 +913,10 @@ DialogInterface.OnDismissListener, Runnable {
                     currSpan = nextSpan;
                     nextSpan = spanIndex<spanSize ? spans.get(spanIndex++) : null;
                 }
-                if (currSpan.second == Tokenizer.KEYWORD)
-                    newState |= 1;
                 char c = hDoc.charAt(currIndex);
                 if (Character.isWhitespace(c))
                     newState |= 2;
                 // err line status
-                boolean flow = false;
                 if (idx <= diagLen) {
                     if (m < 0
                     // start position
@@ -928,8 +925,9 @@ DialogInterface.OnDismissListener, Runnable {
                         || diag.stl < currLineNum && diag.enl >= currLineNum && r == mLeftOffset))
                         m = r;
                     boolean end;
-                    if (m >= 0 && m < width && ((end = diag.enl == currLineNum && diag.enc == i) || (flow = i + 1 == rowEnd))) {
+                    if (m >= 0 && m < width && ((end = diag.enl == currLineNum && diag.enc == i) || (i == rowEnd))) {
                         newState |= 8;
+                        mLineBrush.setColor(ColorScheme.DIAG[diag.severity]);
                         if (idx < diagLen && end)
                             diag = diagList.get(idx++);
                     }
@@ -958,9 +956,8 @@ DialogInterface.OnDismissListener, Runnable {
                     }
                     // draw err line
                     if ((newState&8)!=0) {
-                        mLineBrush.setColor(ColorScheme.DIAG[diag.severity]);
                         canvas.drawLine(m, paintY, Math.min(r, width), paintY, mLineBrush);
-                        m = flow ? mLeftOffset : -1;
+                        m = i == rowEnd ? mLeftOffset : -1;
                         newState &= 7;
                     }
                     drawStart = currIndex;
@@ -1050,6 +1047,7 @@ DialogInterface.OnDismissListener, Runnable {
             canvas.drawText(hDoc, start, end, x, y, paint);
         else if (isShowNonPrinting) { // spaces & showNonPrinting
             paint = mLineBrush;
+            int origColor = paint.getColor();
             paint.setColor(cs.getColor(Colorable.NON_PRINTING_GLYPH));
             while (start < end) {
                 char c = hDoc.charAt(start);
@@ -1059,6 +1057,7 @@ DialogInterface.OnDismissListener, Runnable {
                 x += getAdvance(c, x);
                 start++;
             }
+            paint.setColor(origColor);
         }
     }
 

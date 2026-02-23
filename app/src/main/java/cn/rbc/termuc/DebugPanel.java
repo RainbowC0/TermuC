@@ -250,7 +250,6 @@ TabHost.OnTabChangeListener {
                 Message.obtain(this, ACT_LOG, R.id.dbg_msg, 0, line.concat("\n")).sendToTarget();
                 break;
             case '^':
-                Log.i("Lsp", line);
                 if (st.nextToken() == StreamTokenizer.TT_WORD && "done".equals(st.sval)) {
                     tok = 1;
                     if (st.nextToken() == ','
@@ -312,7 +311,6 @@ TabHost.OnTabChangeListener {
                                     sender.add("-var-create - * " + st.sval);
                                     rd.readLine();
                                     String l = rd.readLine();
-                                    Log.i("Lsp", l);
                                     Map<String,Object> mp = new ArrayMap<>();
                                     StreamTokenizer tk = new StreamTokenizer(new StringReader(l));
                                     tk.nextToken();tk.nextToken(); // ^done

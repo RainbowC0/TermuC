@@ -45,6 +45,9 @@
 	<string name="lsp_port">Server port</string>
     <string name="file_modified">The file %s has been modified. Do you want to reload it?</string>
 	<string name="confirm_delete">Do you want to delete %s?</string>
+	<string name="external_storage">External Storage</string>
+	<string name="termux_storage">Termux Storage</string>
+	<string name="not_termux_dir">Not the Termux storage!</string>
 	<string name="new_">New</string>
 	<string name="file">File</string>
 	<string name="folder">Folder</string>
@@ -60,6 +63,7 @@
 	<string name="new_f">New File/Folder</string>
 	<string name="new_prj">New Project</string>
     <string name="rename">Rename</string>
+	<string name="rename_failed">Rename failed!</string>
 	<string name="find_">Find...</string>
 	<string name="next">Next</string>
 	<string name="prev">Prev</string>
