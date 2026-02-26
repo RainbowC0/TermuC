@@ -101,7 +101,6 @@ public class TextFieldInputConnection extends BaseInputConnection {
                 break;
             case KeyEvent.KEYCODE_PAGE_UP:
             case KeyEvent.KEYCODE_PAGE_DOWN:
-                //nt pos = fld.mCaretPosition;
                 int row = fld.mCaretRow;
                 int nrows = fld.getNumVisibleRows();
                 Document doc = fld.hDoc;

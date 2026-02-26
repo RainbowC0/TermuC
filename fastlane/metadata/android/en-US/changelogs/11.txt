@@ -1,0 +1,5 @@
+• Implement textDocument/documentHighlight of LSP
+• Support access Termux Storage via SAF
+• Fix behaviors of the navigation keys #29
+• Fix errors for the CMake template
+• Fix errors when drawing underlines
