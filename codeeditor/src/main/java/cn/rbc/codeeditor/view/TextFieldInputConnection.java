@@ -71,27 +71,50 @@ public class TextFieldInputConnection extends BaseInputConnection {
 
     @Override
     public boolean sendKeyEvent(KeyEvent event) {
-        switch (event.getKeyCode()) {
+        if (event.getAction() != KeyEvent.ACTION_DOWN)
+            return super.sendKeyEvent(event);
+        FreeScrollingTextField fld = textField;
+        int code = event.getKeyCode();
+        switch (code) {
             case KeyEvent.KEYCODE_SHIFT_LEFT:
-				textField.selectText(!textField.isSelected());
+                fld.selectText(!textField.isSelected());
                 break;
             case KeyEvent.KEYCODE_DPAD_LEFT:
-                textField.moveCaretLeft();
+                fld.moveCaretLeft();
                 break;
             case KeyEvent.KEYCODE_DPAD_UP:
-                textField.moveCaretUp();
+                fld.moveCaretUp();
                 break;
             case KeyEvent.KEYCODE_DPAD_RIGHT:
-                textField.moveCaretRight();
+                fld.moveCaretRight();
                 break;
             case KeyEvent.KEYCODE_DPAD_DOWN:
-                textField.moveCaretDown();
+                fld.moveCaretDown();
                 break;
             case KeyEvent.KEYCODE_MOVE_HOME:
-                textField.moveCaret(0);
+                fld.moveCaret(event.isCtrlPressed() ? 0 : fld.hDoc.getRowOffset(fld.getCaretRow()));
                 break;
             case KeyEvent.KEYCODE_MOVE_END:
-                textField.moveCaret(textField.hDoc.length() - 1);
+                int off;
+                fld.moveCaret(event.isCtrlPressed() || (off = fld.hDoc.getRowOffset(fld.getCaretRow() + 1)) < 0
+                    ? fld.hDoc.length() - 1 : off - 1);
+                break;
+            case KeyEvent.KEYCODE_PAGE_UP:
+            case KeyEvent.KEYCODE_PAGE_DOWN:
+                //nt pos = fld.mCaretPosition;
+                int row = fld.mCaretRow;
+                int nrows = fld.getNumVisibleRows();
+                Document doc = fld.hDoc;
+                if (code == KeyEvent.KEYCODE_PAGE_UP) {
+                    row = Math.max(row - nrows, 0);
+                } else {
+                    row = Math.min(row + nrows, doc.getRowCount()-1);
+                }
+                off = doc.getRowOffset(row) + Math.min(fld.getColumn(fld.mCaretPosition), doc.getRowSize(row)-1);
+                if (off < 0) off = 0;
+                int len = doc.length()-1;
+                if (off > len) off = len;
+                fld.moveCaret(off);
                 break;
             case KeyEvent.KEYCODE_ENTER:
             case KeyEvent.KEYCODE_NUMPAD_ENTER:
