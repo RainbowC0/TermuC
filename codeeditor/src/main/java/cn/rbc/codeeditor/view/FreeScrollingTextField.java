@@ -263,7 +263,7 @@ DialogInterface.OnDismissListener, Runnable {
     private RectF mRect;
     private EdgeEffect mTopEdge;
     private EdgeEffect mBottomEdge;
-    ClipboardPanel mClipboardPanel;
+    protected ClipboardPanel mClipboardPanel;
     private ClipboardManager mClipboardManager;
     private float mZoomFactor = 1;
     private int mCaretX, mCaretY;
@@ -292,6 +292,10 @@ DialogInterface.OnDismissListener, Runnable {
 
     public void setCaretListener(OnCaretScrollListener caretScrollListener) {
         crtLis = caretScrollListener;
+    }
+
+    public void setClipboardCallback(ActionMode.Callback callback, int createMode) {
+        mClipboardPanel.setCustomCallback(callback, createMode);
     }
 
     protected void initTextField(Context context) {
@@ -922,10 +926,11 @@ DialogInterface.OnDismissListener, Runnable {
                     // start position
                         && (diag.stl == currLineNum && diag.stc == i
                     // following position
-                        || diag.stl < currLineNum && diag.enl >= currLineNum && r == mLeftOffset))
+                        || diag.stl < currLineNum && diag.enl >= currLineNum && r == mLeftOffset)) {
                         m = r;
+                    }
                     boolean end;
-                    if (m >= 0 && m < width && ((end = diag.enl == currLineNum && diag.enc == i) || (i == rowEnd))) {
+                    if (m >= 0 && m < width && ((end = diag.enl == currLineNum && diag.enc == i) || i == rowEnd)) {
                         newState |= 8;
                         mLineBrush.setColor(ColorScheme.DIAG[diag.severity]);
                         if (idx < diagLen && end)
@@ -1210,7 +1215,7 @@ DialogInterface.OnDismissListener, Runnable {
         top -= Math.max(caretSpill.top, metrics.descent);
         top = Math.max(0, top);
 
-        super.invalidate(0,
+        super.postInvalidateOnAnimation(0,
 						 top,
 						 getScrollX() + getWidth(),
 						 endRow * rowHeight() + getPaddingTop() + caretSpill.bottom);
@@ -1234,7 +1239,7 @@ DialogInterface.OnDismissListener, Runnable {
         top -= Math.max(caretSpill.top, metrics.descent);
         top = Math.max(0, top);
 
-        super.invalidate(0,
+        super.postInvalidateOnAnimation(0,
 						 top,
 						 getScrollX() + getWidth(),
 						 getScrollY() + getHeight());
@@ -1440,7 +1445,7 @@ DialogInterface.OnDismissListener, Runnable {
      * @return The index of the closest character, or -1 if there is
      * no character or nearest character at that coordinate
      */
-    int coordToCharIndex(int x, int y) {
+    public int coordToCharIndex(int x, int y) {
         int row = y / rowHeight();
         if (row > hDoc.getRowCount())
             return hDoc.length()-1;
@@ -1607,11 +1612,12 @@ DialogInterface.OnDismissListener, Runnable {
             int y = mScroller.getCurrY();
             if (oldX != x || oldY != y) {
                 scrollTo(x, y);
+                mClipboardPanel.invalidateContentRect();
             }
             
 			/* ViewCompat */
-            if (!awakenScrollBars())
-                postInvalidateOnAnimation();
+            awakenScrollBars();
+                //postInvalidateOnAnimation();
         }
     }
 
@@ -1840,7 +1846,7 @@ DialogInterface.OnDismissListener, Runnable {
 
     public void selectAll() {
         mCtrlr.setSelectionRange(0, hDoc.length() - 1, false, true);
-        mClipboardPanel.invalidateContentRect();
+        mClipboardPanel.invalidate();
     }
 
     public void setSelection(int beginPosition, int numChars) {

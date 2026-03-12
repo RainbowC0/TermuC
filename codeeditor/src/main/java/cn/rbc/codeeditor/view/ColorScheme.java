@@ -125,5 +125,5 @@ public abstract class ColorScheme {
     private static final int WHITE = 0xFFFFFFE0;
     private static final int LIGHT_BLUE2 = 0xFF40B0FF;
 
-    static final int[] DIAG = {Color.RED, Color.MAGENTA, 0xFF00BB00, Color.CYAN};
+    public static final int[] DIAG = {Color.RED, Color.MAGENTA, 0xFF00BB00, Color.CYAN};
 }

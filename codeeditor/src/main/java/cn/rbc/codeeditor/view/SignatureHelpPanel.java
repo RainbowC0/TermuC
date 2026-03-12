@@ -23,7 +23,7 @@ import android.content.res.*;
 import cn.rbc.codeeditor.util.*;
 import android.widget.*;
 import android.util.*;
-import cn.rbc.termuc.*;
+import cn.rbc.codeeditor.R;
 
 public class SignatureHelpPanel implements View.OnClickListener {
     private static final String TAG = "SignatureHelpPanel";

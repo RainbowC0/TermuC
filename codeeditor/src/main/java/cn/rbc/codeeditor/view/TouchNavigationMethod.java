@@ -30,6 +30,7 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
     protected static int TOUCH_SLOP;
     protected final FreeScrollingTextField mTextField;
     protected boolean isCaretTouched = false, mIsFastScrolling = false;
+    private volatile boolean longPressed;
     private GestureDetector mGestureDetector;
     private float lastDist, lastSize;
     private float lastX, lastY;
@@ -46,6 +47,7 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
     @Override
     public boolean onDown(MotionEvent e) {
 		// mTextField.getParent().requestDisallowInterceptTouchEvent(e.getX() > 10);
+        longPressed = false;
         int x = screenToViewX((int) e.getX());
         int y = screenToViewY((int) e.getY());
         FreeScrollingTextField field = mTextField;
@@ -109,7 +111,7 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
 			if (y == -1)
 				y = doc.getLineCount() - 1;
 		    doc.markLine(1 + y);
-			tf.invalidate();
+			tf.postInvalidateOnAnimation();
 			return true;
 		}
         boolean b = tf.isSelectText();
@@ -137,7 +139,6 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
      */
     public boolean onUp(MotionEvent e) {
         mTextField.stopAutoScrollCaret();
-        mTextField.mClipboardPanel.invalidateContentRect();
         isCaretTouched = false;
         mIsFastScrolling = false;
         lastDist = 0;
@@ -176,6 +177,7 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
     protected void dragCaret(MotionEvent e) {
         FreeScrollingTextField field = mTextField;
         if (!field.isSelectText() && isDragSelect()) {
+            // Todo not trigger selection listener
             field.selectText(true);
         }
 
@@ -217,9 +219,10 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
                 velocityX = 0;
 
             mTextField.flingScroll((int) -velocityX, (int) -velocityY);
+            onUp(e2);
+            return true;
         }
-        onUp(e2);
-        return true;
+        return false;
     }
 
     private float spacing(MotionEvent event) {
@@ -251,10 +254,15 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
      */
     public boolean onTouchEvent(MotionEvent event) {
         onTouchZoom(event);
-        boolean handled = mGestureDetector.onTouchEvent(event);
+        boolean handled = mGestureDetector.onTouchEvent(event) || longPressed;
         if (!handled
 			&& (event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
             // propagate up events since GestureDetector does not do so
+            ClipboardPanel panel = mTextField.mClipboardPanel;
+            if (isCaretTouched)
+                panel.invalidate();
+            else
+            panel.invalidateContentRect();
             handled = onUp(event);
         }
         return handled;
@@ -263,6 +271,7 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
     @Override
     public void onLongPress(MotionEvent e) {
         onDoubleTap(e);
+        longPressed = true;
     }
 
     @Override
@@ -270,7 +279,7 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
         isCaretTouched = true;
         int x = screenToViewX((int) e.getX());
         int y = screenToViewY((int) e.getY());
-        int charOffset = mTextField.coordToCharIndex(x, y);
+        final int charOffset = mTextField.coordToCharIndex(x, y);
 
         FreeScrollingTextField field = mTextField;
         if (field.isSelectText() && field.inSelectionRange(charOffset)) {
@@ -290,45 +299,15 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
                 start++;
             for (end = charOffset; Character.isJavaIdentifierPart(doc.charAt(end)); end++);
             field.setSelectionRange(start, end - start);
-            // toast err msg
-            List<ErrSpan> dg = doc.getDiag();
-            if (!(dg == null || dg.isEmpty())) {
-                y = dg.size() - 1;
-                int m, line = 1 + doc.findLineNumber(charOffset);
-                x = doc.getLineOffset(line - 1);
-                start -= x;
-                end -= x;
-                x = 0;
-                ErrSpan errspan;
-                while (x < y) {
-                    m = (x + y) >> 1;
-                    errspan = dg.get(m);
-                    if (errspan.enl > line || errspan.enl == line && errspan.enc >= start)
-                        y = m;
-                    else
-                        x = m + 1;
-                }
-                errspan = dg.get(y);
-                if ((errspan.stl < line || errspan.stl == line && errspan.stc <= end)
-                    && (line < errspan.enl || line == errspan.enl && start <= errspan.enc)
-                    && errspan.msg != null) {
-                    Context ctx = field.getContext();
-                    Toast t = new Toast(ctx);
-                    LinearLayout ll = new LinearLayout(ctx);
-                    ll.setOrientation(LinearLayout.VERTICAL);
-                    TextView tv = new TextView(ctx);
-                    tv.setTextColor(0xffffffff);
-                    tv.setText(errspan.msg);
-                    int pd = (int)(12 * HelperUtils.getDpi(ctx) + .5f);
-                    ll.setPadding(pd, pd, pd, pd);
-                    ll.setBackgroundColor(ColorScheme.DIAG[errspan.severity] & 0xf0ffffff);
-                    ll.addView(tv);
-                    t.setView(ll);
-                    HelperUtils.show(t);
-			    }
-            }
         }
         return true;
+    }
+
+    @Override
+    public boolean onDoubleTapEvent(MotionEvent e)
+    {
+        if (e.getActionMasked() == MotionEvent.ACTION_UP) return true;
+        return super.onDoubleTapEvent(e);
     }
 
     public boolean onKeyDown(int keyCode, KeyEvent event) {

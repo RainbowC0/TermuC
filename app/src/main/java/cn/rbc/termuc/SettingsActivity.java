@@ -145,6 +145,7 @@ implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickLi
 		Application.usespace = mUseSpacePref.isChecked();
 		Application.tabsize = Integer.parseInt(mTabSizePref.getValue());
 		Application.font = tpFont;
+        Application.clearCache();
 		Application.textsize = Integer.parseInt(mSizePref.getValue());
         Application.suggestion = mSuggestionPref.isChecked();
         Application.auto_caps = mAutoCapsPref.isChecked();

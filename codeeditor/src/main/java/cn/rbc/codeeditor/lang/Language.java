@@ -38,7 +38,8 @@ public abstract class Language
 	};
 
 
-	protected HashSet<String> _keywordsMap = new HashSet<String>(0);
+	protected Set<String> _keywordsMap = new HashSet<String>(0);
+    protected Set<String> _typeSet = new HashSet<>(0);
 	protected HashMap<String, Integer> _namesMap = new HashMap<String, Integer>();
 	// protected HashMap<String, Integer> _keynamesMap = new HashMap<String, Integer>(0);
 	protected HashMap<String, String[]> _basesMap = new HashMap<String, String[]>(0);
@@ -92,16 +93,12 @@ public abstract class Language
 
 	public void setKeywords(String[] keywords)
 	{
-		_keyword = new String[keywords.length];
-		for(int i=0;i<keywords.length;i++){
-			_keyword[i]="[K]"+keywords[i];
-		}
-
-		_keywordsMap = new HashSet<String>(keywords.length);
-		for (int i = 0; i < keywords.length; ++i)
-		{
-			_keywordsMap.add(keywords[i]);
-		}
+		_keywordsMap.clear();
+        for (int i=0;i<keywords.length;i++) {
+            _keywordsMap.add("[K]"+keywords[i]);
+        }
+        _keyword = new String[_keywordsMap.size()];
+        _keywordsMap.toArray(_keyword);
 	}
 /*
 	public String[] getKeynames() {
@@ -125,13 +122,14 @@ public abstract class Language
 		_name = new String[_namesMap.size()];
 		_namesMap.keySet().toArray(_name);
 	}
-/*
-	public void addTypes(String[] types) {
-		for (String tp:types)
-			_namesMap.put(tp, Tokenizer.TYPE);
-		_name = new String[_namesMap.size()];
-		_namesMap.keySet().toArray(_name);
-	}*/
+
+	public void setTypes(Set<String> types) {
+        _typeSet = types;
+	}
+
+    public Set<String> getTypes() {
+        return _typeSet;
+    }
 
 	public void addBasePackage(String name, String[] names)
 	{
@@ -191,8 +189,7 @@ public abstract class Language
 	}
 
 	public final boolean isType(String s) {
-		Integer b = _namesMap.get(s);
-		return b!=null && b.intValue() == Tokenizer.TYPE;
+		return _typeSet.contains(s);
 	}
 
 	public final boolean isBasePackage(String s)

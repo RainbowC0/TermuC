@@ -11,6 +11,8 @@ import cn.rbc.codeeditor.util.*;
 import cn.rbc.codeeditor.view.*;
 import cn.rbc.codeeditor.view.autocomplete.*;
 import java.io.*;
+import java.util.List;
+import android.widget.*;
 
 public class TextEditor extends FreeScrollingTextField implements OnCaretScrollListener {
     // private Document _inputtingDoc;
@@ -63,7 +65,7 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
         setAutoComplete(false);
         setAutoIndent(true);
         setUseGboard(true);
-        setNavigationMethod(new YoyoNavigationMethod(this));
+        setNavigationMethod(new EditorNavigationMethod(this));
         crtLis = this;
     }
 
@@ -77,7 +79,7 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
     }
 
     public static void setLanguage(Language language) {
-        AutoCompletePanel.setLanguage(language);
+        //AutoCompletePanel.setLanguage(language);
         Tokenizer.setLanguage(language);
     }
 
@@ -157,6 +159,10 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
 
     public SignatureHelpPanel getSigHelpPanel() {
         return mSigHelpPanel;
+    }
+
+    public ClipboardPanel getClipboardPanel() {
+        return mClipboardPanel;
     }
 
     public File getOpenedFile() {
@@ -251,6 +257,63 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
      }*/
      interface OnEditedListener {
          void onEdited(boolean edited);
+     }
+
+     private static class EditorNavigationMethod extends YoyoNavigationMethod {
+         EditorNavigationMethod(FreeScrollingTextField fld) {
+             super(fld);
+         }
+
+         @Override
+         public boolean onDoubleTap(MotionEvent e)
+         {
+             boolean ret = super.onDoubleTap(e);
+             FreeScrollingTextField fld = mTextField;
+             Document doc = fld.getText();
+             List<ErrSpan> dg = doc.getDiag();
+             int x;
+             if (dg != null && dg.size() > 0
+                 && (x = fld.coordToCharIndex(
+                             screenToViewX((int)e.getX()),
+                             screenToViewY((int)e.getY())
+                         )
+                     ) >= 0) {
+                 int line = 1 + doc.findLineNumber(x);
+                 int y = dg.size() - 1;
+                 x = doc.getLineOffset(line - 1);
+                 int start = fld.getSelectionStart() - x;
+                 int end = fld.getSelectionEnd() - x;
+                 x = 0;
+                 ErrSpan errspan;
+                 while (x < y) {
+                     int m = (x + y) >> 1;
+                     errspan = dg.get(m);
+                     if (errspan.enl > line || errspan.enl == line && errspan.enc >= start)
+                         y = m;
+                     else
+                         x = m + 1;
+                 }
+                 errspan = dg.get(y);
+                 if ((errspan.stl < line || errspan.stl == line && errspan.stc <= end)
+                     && (line < errspan.enl || line == errspan.enl && start <= errspan.enc)
+                     && errspan.msg != null) {
+                     Context ctx = mTextField.getContext();
+                     Toast t = new Toast(ctx);
+                     LinearLayout ll = new LinearLayout(ctx);
+                     ll.setOrientation(LinearLayout.VERTICAL);
+                     TextView tv = new TextView(ctx);
+                     tv.setTextColor(0xffffffff);
+                     tv.setText(errspan.msg);
+                     int pd = (int)(12 * HelperUtils.getDpi(ctx) + .5f);
+                     ll.setPadding(pd, pd, pd, pd);
+                     ll.setBackgroundColor(ColorScheme.DIAG[errspan.severity] & 0xf0ffffff);
+                     ll.addView(tv);
+                     t.setView(ll);
+                     HelperUtils.show(t);
+                 }
+             }
+             return ret;
+         }
      }
 }
 

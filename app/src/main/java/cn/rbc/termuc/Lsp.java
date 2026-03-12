@@ -14,17 +14,23 @@ import org.json.*;
 
 import cn.rbc.codeeditor.util.Range;
 
-public class Lsp implements Runnable {
+public final class Lsp implements Runnable {
 	final static int INITIALIZE = 0, INITIALIZED = 1,
 	OPEN = 2, CLOSE = 3,
 	COMPLETION = 4, FIX = 5, CHANGE = 6, SAVE = 7, NOTI = 8, SIGN_HELP = 9,
+    FORMAT = 10, HIGHLIGHT = 11, CODEACTION = 12, EXECCMD = 13, SEMTOK = 14,
+    SEMTOKD = 15,
 	ERROR = -1;
+    final static enum SemToken {
+        NAMESPACE, TYPE, CLASS, ENUM, INTERFACE, STRUCT, TYPEPARAMETER, PARAMETER, VARIABLE, PROPERTY, ENUMMEMBER, EVENT, FUNCTION, METHOD, MACRO, KEYWORD, MODIFIER, COMMENT, STRING, NUMBER, REGEXP, OPERATOR, UNKNOWN
+    };
 	private final static String TAG = "LSP";
 	private final static byte[] CONTENTLEN = "Content-Length: ".getBytes();
 	private int tp;
 	private Socket sk = new Socket();
 	private Sender mSndr = new Sender();
 	private char[] compTrigs = {}, sigTrigs = {};
+    private SemToken[] semToks = {};
 	private Handler mRead;
 
 	// In main thread
@@ -92,10 +98,11 @@ public class Lsp implements Runnable {
 		mRead.sendEmptyMessage(ERROR);
 	}
 
-	protected static String wrap(String m, Object p, boolean req) {
+	protected static String wrap(String m, Object p, int id) {
 		StringBuilder s = new StringBuilder("{\"jsonrpc\":\"2.0\"");
-		if (req)
-			s.append(",\"id\":0");
+		if (id >= 0) {
+			s.append(",\"id\":");s.append(id);
+        }
 		s.append(",\"method\":\"");s.append(m);
 		s.append("\",\"params\":");s.append(JSONObject.wrap(p));
 		s.append("}");
@@ -112,7 +119,7 @@ public class Lsp implements Runnable {
 			sb.append(JSONObject.quote(new File(root).toURI().toString()));
 		}
 		sb.append(",\"initializationOptions\":{\"fallbackFlags\":[\"-Wall\"]}}");
-		mSndr.send("initialize", sb.toString(), true);
+		mSndr.send("initialize", sb.toString(), 0);
 	}
 
 	public void setCompTrigs(char[] c) {
@@ -140,9 +147,35 @@ public class Lsp implements Runnable {
         return false;
     }
 
+    public void setSemToks(SemToken[] toks) {
+        semToks = toks;
+    }
+
+    public int nativeToken(int semTok) {
+        if (semTok >= semToks.length) return Tokenizer.UNKNOWN;
+        switch (semToks[semTok]) {
+            case NAMESPACE:
+            case TYPE:
+            case CLASS:
+            case ENUM:
+            case STRUCT:
+            case INTERFACE: return Tokenizer.TYPE;
+            case KEYWORD: return Tokenizer.KEYWORD;
+        }
+        return Tokenizer.UNKNOWN;
+    }
+
+    static SemToken semValueOf(String str) {
+        try {
+            return SemToken.valueOf(str);
+        } catch (IllegalArgumentException ie) {
+            return SemToken.UNKNOWN;
+        }
+    }
+
 	public void initialized() {
 		tp = INITIALIZED;
-		mSndr.send("initialized", new HashMap<>(), false);
+		mSndr.send("initialized", new HashMap<>(), -1);
 	}
 
 	public void didClose(File f) {
@@ -151,7 +184,7 @@ public class Lsp implements Runnable {
 		HashMap<String,HashMap<String,String>> k = new HashMap<>();
 		k.put("textDocument", m);
 		tp = CLOSE;
-		mSndr.send("textDocument/didClose", k, false);
+		mSndr.send("textDocument/didClose", k, -1);
 	}
 
 	public void didOpen(File f, String lang, String ct) {
@@ -162,7 +195,7 @@ public class Lsp implements Runnable {
 		m.append(JSONObject.quote(ct));
 		m.append("}}");
 		tp = OPEN;
-		mSndr.send("textDocument/didOpen", m.toString(), false);
+		mSndr.send("textDocument/didOpen", m.toString(), -1);
 	}
 
 	public void didSave(File f) {
@@ -170,7 +203,7 @@ public class Lsp implements Runnable {
 		s.append(JSONObject.quote(Uri.fromFile(f).toString()));
 		s.append("}}");
 		tp = SAVE;
-		mSndr.send("textDocument/didSave", s.toString(), false);
+		mSndr.send("textDocument/didSave", s.toString(), -1);
 	}
 
 	public void didChange(File f, int version, String text) {
@@ -182,7 +215,7 @@ public class Lsp implements Runnable {
 		sb.append(JSONObject.quote(text));
 		sb.append("}]}").toString();
 		tp = CHANGE;
-		mSndr.send("textDocument/didChange", sb.toString(), false);
+		mSndr.send("textDocument/didChange", sb.toString(), -1);
 	}
 
 	public void didChange(File f, int version, List<Range> chs) {
@@ -208,7 +241,7 @@ public class Lsp implements Runnable {
 		sb.setCharAt(sb.length()-1, ']');
 		sb.append('}');
 		tp = CHANGE;
-		mSndr.send("textDocument/didChange", sb.toString(), false);
+		mSndr.send("textDocument/didChange", sb.toString(), -1);
 	}
 
 	public boolean completionTry(File f, int l, int c, char tgc) {
@@ -231,7 +264,7 @@ public class Lsp implements Runnable {
 		sb.append("}}");
 		tp = COMPLETION;
 		//Log.d(TAG, sb.toString());
-		mSndr.send("textDocument/completion", sb.toString(), true);
+		mSndr.send("textDocument/completion", sb.toString(), 0);
 		return true;
 	}
 
@@ -249,7 +282,7 @@ public class Lsp implements Runnable {
         sb.append(retrig);
         sb.append("}}");
         tp = SIGN_HELP;
-        mSndr.send("textDocument/signatureHelp", sb.toString(), true);
+        mSndr.send("textDocument/signatureHelp", sb.toString(), 0);
         return true;
     }
 
@@ -262,7 +295,7 @@ public class Lsp implements Runnable {
 		sb.append(useSpace);
 		sb.append("}}");
 		//Log.d(TAG, sb.toString());
-		mSndr.send("textDocument/formatting", sb.toString(), true);
+		mSndr.send("textDocument/formatting", sb.toString(), FORMAT);
 	}
 
 	public void rangeFormatting(File fl, Range range, int tabSize, boolean useSpace) {
@@ -281,7 +314,7 @@ public class Lsp implements Runnable {
 		sb.append(",\"insertSpaces\":");
 		sb.append(useSpace);
 		sb.append("}}");
-		mSndr.send("textDocument/rangeFormatting", sb.toString(), true);
+		mSndr.send("textDocument/rangeFormatting", sb.toString(), FORMAT);
 	}
 
 	public void documentHighlight(File fl, int l, int c) {
@@ -292,15 +325,81 @@ public class Lsp implements Runnable {
 		sb.append(",\"character\":");
 		sb.append(c);
 		sb.append("}}");
-		mSndr.send("textDocument/documentHighlight", sb.toString(), true);
+		mSndr.send("textDocument/documentHighlight", sb.toString(), HIGHLIGHT);
 	}
 
+    public void codeAction(File fl, Range range, List<ErrSpan> diags) {
+        StringBuilder sb = new StringBuilder("{\"textDocument\":{\"uri\":");
+        sb.append(JSONObject.quote(Uri.fromFile(fl).toString()));
+        sb.append("},\"range\":{\"start\":{\"line\":");
+        sb.append(range.stl);
+        sb.append(",\"character\":");
+        sb.append(range.stc);
+        sb.append("},\"end\":{\"line\":");
+        sb.append(range.enl);
+        sb.append(",\"character\":");
+		sb.append(range.enc);
+        sb.append("}},\"context\":{\"diagnostics\":[");
+        for (ErrSpan er : diags) {
+            sb.append("{\"range\":{\"start\":{\"line\":");
+            sb.append(er.stl-1);
+            sb.append(",\"character\":");
+            sb.append(er.stc);
+            sb.append("},\"end\":{\"line\":");
+            sb.append(er.enl-1);
+            sb.append(",\"character\":");
+            sb.append(er.enc);
+            sb.append("}},\"message\":");
+            sb.append(JSONObject.quote(er.msg));
+            sb.append(",\"severity\":");
+            sb.append(er.severity+1);
+            Diagnostic dg;
+            if (er instanceof Diagnostic && (dg = (Diagnostic)er).code != null) {
+                
+                sb.append(",\"code\":");
+                if (dg.code instanceof String)
+                    sb.append(JSONObject.quote((String)dg.code));
+                 else
+                    sb.append(dg.code);
+            }
+            sb.append("},");
+        }
+        sb.setCharAt(sb.length()-1, ']');
+        sb.append("}}");
+        mSndr.send("textDocument/codeAction", sb.toString(), CODEACTION);
+    }
+
+    public void executeCommand(Command cmd) {
+        StringBuilder sb = new StringBuilder("{\"command\":");
+        sb.append(JSONObject.quote(cmd.command));
+        sb.append(",\"arguments\":");
+        sb.append(cmd.args);
+        sb.append('}');
+        mSndr.send("workspace/executeCommand", sb.toString(), EXECCMD);
+    }
+
+    public void reply(int id, String result) {
+        StringBuilder sb = new StringBuilder("{\"jsonrpc\":\"2.0\",\"id\":");
+        sb.append(id);
+        sb.append(",\"result\":");
+        sb.append(result);
+        sb.append('}');
+        mSndr.offer(sb.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    public void semanticTokensFull(File f) {
+        StringBuilder sb = new StringBuilder("{\"textDocument\":{\"uri\":");
+        sb.append(JSONObject.quote(Uri.fromFile(f).toString()));
+        sb.append("}}");
+        mSndr.send("textDocument/semanticTokens/full", sb.toString(), SEMTOK);
+    }
+
 	public void shutdown() {
-		mSndr.send("shutdown", "{}", true);
+		mSndr.send("shutdown", "{}", 0);
 	}
 
 	public void exit() {
-		mSndr.send("exit", "{}", false);
+		mSndr.send("exit", "{}", -1);
 	}
 
 	public boolean isConnected() {
@@ -308,8 +407,8 @@ public class Lsp implements Runnable {
 	}
 
 	class Sender extends LinkedBlockingQueue<byte[]> implements Runnable {
-		public void send(String cmd, Object hm, boolean req) {
-			offer(wrap(cmd, hm, req).getBytes(StandardCharsets.UTF_8));
+		public final void send(String cmd, Object hm, int id) {
+			offer(wrap(cmd, hm, id).getBytes(StandardCharsets.UTF_8));
 		}
 
 		public void run() {

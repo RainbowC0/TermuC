@@ -6,7 +6,7 @@ import android.view.inputmethod.*;
 import android.widget.*;
 import cn.rbc.codeeditor.lang.*;
 import cn.rbc.codeeditor.util.*;
-import cn.rbc.termuc.*;
+import cn.rbc.codeeditor.R;
 import java.util.*;
 
 import static cn.rbc.codeeditor.util.DLog.log;
@@ -55,7 +55,7 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
 		FreeScrollingTextField fd = field;
 		fd.hDoc.setSpans(mRes);
 		lexing = false;
-		fd.invalidate();
+		fd.postInvalidateOnAnimation();
 	}
 
     //- TextFieldController -----------------------------------------------

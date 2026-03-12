@@ -478,9 +478,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 		EditFragment ef = null;
 		for (String i:opens) {
 			if (i.equals(pth)) {
-				tp = lastFrag.type&EditFragment.TYPE_MASK;
-				if (s && tp != EditFragment.TYPE_TXT)
-					lsp.didOpen(lastFrag.getFile(), tp == EditFragment.TYPE_CPP ?"cpp": "c", codeEditor.getText().toString());
+                if (s) lastFrag.onOpen();
 				continue;
 			}
 			File f = new File(i);
@@ -547,7 +545,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 				}
 				break;
 			case R.id.search:
-				startActionMode(mSearchAction);
+				mSearchAction.show();
 				break;
 			case R.id.close:
 				closePage(getActionBar().getSelectedNavigationIndex());
@@ -610,6 +608,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
         mTans.commit();
         Application app = Application.getInstance();
         app.lsp.didClose(new File(_t));
+        app.hand.cacheData.remove(_t);
         app.load(_t);
     }
 
@@ -619,7 +618,6 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 			codeEditor.sendPrintableChar(Language.TAB);
             return;
 		}
-		codeEditor.getText().setTyping(true);
         codeEditor.paste(charSequence);
     }
 
@@ -781,9 +779,10 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 						ed.setTabSpaces(Application.tabsize);
                         ed.setSuggestion(Application.suggestion);
                         ed.setAutoCaps(Application.auto_caps);
+                        if (chg) f.onOpen();/*
 						int tp = f.type&EditFragment.TYPE_MASK;
 						if (chg && tp!=EditFragment.TYPE_TXT)
-							lsp.didOpen(f.getFile(), tp==EditFragment.TYPE_C?"c":"cpp", ed.getText().toString());
+							lsp.didOpen(f.getFile(), tp==EditFragment.TYPE_C?"c":"cpp", ed.getText().toString());*/
 					}	
 				} else if (resultCode == RESULT_FIRST_USER) {
 					recreate();
@@ -906,6 +905,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
         mSearchAction = null;
         codeEditor = null;
         msgEmpty = null;
+        Application.getInstance().hand.updateActivity(null);
         super.onDestroy();
     }
 

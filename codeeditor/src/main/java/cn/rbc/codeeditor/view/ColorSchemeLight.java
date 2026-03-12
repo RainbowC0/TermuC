@@ -67,7 +67,7 @@ public class ColorSchemeLight extends ColorScheme {
 	private static final int GREY = 0xFF808080;
 	private static final int GREEN_LIGHT = 0xFF009B00;
 	//private static final int GREEN_DARK = 0xFF3F7F5F;
-	private static final int BLUE_LIGHT = 0xFF0F9CFF;
+	private static final int BLUE_LIGHT = 0xFF0C8AF9;
 	private static final int BLUE_DARK = 0xFF2C82C8;
 
     public static ColorScheme getInstance() {

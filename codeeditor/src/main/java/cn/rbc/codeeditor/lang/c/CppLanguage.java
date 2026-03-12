@@ -2,6 +2,7 @@ package cn.rbc.codeeditor.lang.c;
 
 import cn.rbc.codeeditor.lang.*;
 import cn.rbc.codeeditor.util.*;
+import java.util.*;
 
 public class CppLanguage extends Language{
 	private static Language _theOne = null;
@@ -93,7 +94,17 @@ public class CppLanguage extends Language{
 	@Override
 	public Lexer newLexer(CharSeqReader reader) {
         if (lx==null) {
-            lx = new CppLexer(reader);
+            CppLexer cx = new CppLexer(reader);
+            lx = cx;
+            int l = keywords.length - 13;
+            Set<String> keys = new HashSet<>();
+            for (int i=0;i<l;i++) {
+                keys.add(keywords[i]);
+            }
+            for (int i=0;i<cppNames.length;i++) {
+                keys.add(cppNames[i]);
+            }
+            cx.keywords = keys;
         } else lx.yyreset(reader);
 		return lx;
 	}

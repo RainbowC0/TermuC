@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.ForegroundColorSpan;
@@ -18,15 +19,16 @@ import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import cn.rbc.termuc.R;
+import cn.rbc.codeeditor.R;
+import cn.rbc.codeeditor.lang.Language;
 import cn.rbc.codeeditor.util.Flag;
+import cn.rbc.codeeditor.util.Tokenizer;
 import cn.rbc.codeeditor.view.FreeScrollingTextField;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static cn.rbc.codeeditor.util.DLog.log;
-import android.graphics.*;
 
 /**
  * Adapter定义
@@ -154,17 +156,18 @@ public class AutoPanelAdapter extends BaseAdapter  {
                 ArrayList<String> buf = new ArrayList<String>();
                 String input = String.valueOf(constraint).toLowerCase();
 
-                String[] keywords = AutoCompletePanel._globalLanguage.getUserWord();
+                Language lang = Tokenizer.getLanguage();
+                String[] keywords = lang.getUserWord();
                 for (String k : keywords) {
                     if (k.toLowerCase().startsWith(input))
                         buf.add(k);
                 }
-                keywords = AutoCompletePanel._globalLanguage.getKeywords();
+                keywords = lang.getKeywords();
                 for (String k : keywords) {
                     if (k.indexOf(input) == 3)
                         buf.add(k);
                 }
-                keywords = AutoCompletePanel._globalLanguage.getNames();
+                keywords = lang.getNames();
                 for (String k : keywords) {
                     if (k.toLowerCase().startsWith(input))
                         buf.add(k);

@@ -80,35 +80,15 @@ public class YoyoNavigationMethod extends TouchNavigationMethod implements OnCar
 
 	@Override
 	public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
-		
         if (isCaretHandleTouched) {
-			//TODO find out if ACTION_UP events are actually passed to onScroll
-           
-			if ((e2.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
-                onUp(e2);
-			} else {	
-				isShowYoyoCaret = true;
-				moveHandle(mYoyoCaret, e2);
-			}
-
+			isShowYoyoCaret = true;
+			moveHandle(mYoyoCaret, e2);
 			return true;
 		} else if (isStartHandleTouched) {
-			//TODO find out if ACTION_UP events are actually passed to onScroll
-			if ((e2.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
-				onUp(e2);
-			} else {
-				moveHandle(mYoyoStart, e2);
-			}
-
+			moveHandle(mYoyoStart, e2);
 			return true;
 		} else if (isEndHandleTouched) {
-			//TODO find out if ACTION_UP events are actually passed to onScroll
-			if ((e2.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
-				onUp(e2);
-			} else {
-				moveHandle(mYoyoEnd, e2);
-			}
-
+			moveHandle(mYoyoEnd, e2);
 			return true;
 		} else {
 			return super.onScroll(e1, e2, distanceX, distanceY);
@@ -214,15 +194,10 @@ public class YoyoNavigationMethod extends TouchNavigationMethod implements OnCar
 	}
 
 	@Override
-	public void onLongPress(MotionEvent e) {
-		// TODO: Implement this method
-		onDoubleTap(e);
-	}
-
-	@Override
 	public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
 		if (isCaretHandleTouched || isStartHandleTouched || isEndHandleTouched) {
 			onUp(e2);
+            mTextField.mClipboardPanel.invalidate();
 			return true;
 		} else {
 			return super.onFling(e1, e2, velocityX, velocityY);

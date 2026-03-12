@@ -13,32 +13,41 @@ DialogInterface.OnClickListener {
 	private EditText e;
 	private int idx = 0;
     private View transV;
+    private ActionMode mMode;
 
 	public SearchAction(MainActivity ma) {
 		this.ma = ma;
 	}
 
+    public void show() {
+        if (mMode == null)
+            mMode = ma.startActionMode(this);
+        else 
+            mMode.invalidate();
+    }
+
 	public void onDestroyActionMode(ActionMode p1) {
 		transV = null;
+        mMode = null;
         TextEditor te = ma.getEditor();
         te.setSelection(te.getCaretPosition());
         te.requestFocus();
 	}
 
 	public boolean onPrepareActionMode(ActionMode p1, Menu p2) {
+        TextEditor ed = ma.getEditor();
+        String st = ed.getSelectedText();
+        if (!st.isEmpty()) {
+            idx = ed.getSelectionStart();
+            e.setText(st);
+        } else
+			idx = 0;
 		return false;
 	}
 
 	public boolean onCreateActionMode(ActionMode p1, Menu p2) {
 		View v = View.inflate(ma, R.layout.search_action, null);
 		e = v.findViewById(R.id.search_edit);
-		TextEditor ed = ma.getEditor();
-		String st = ed.getSelectedText();
-		if (!st.isEmpty()) {
-			e.setText(st);
-			idx = ed.getSelectionStart();
-		} else
-			idx = 0;
 		e.addTextChangedListener(this);
 		e.setOnEditorActionListener(this);
 		p1.setCustomView(v);

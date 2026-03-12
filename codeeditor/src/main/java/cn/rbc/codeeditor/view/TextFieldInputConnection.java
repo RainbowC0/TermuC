@@ -28,7 +28,9 @@ public class TextFieldInputConnection extends BaseInputConnection {
     public void resetComposingState() {
         composingCharCount = 0;
         isComposing = false;
-        textField.hDoc.endBatchEdit();
+        Document doc = textField.hDoc;
+        if (doc.isBatchEdit())
+            doc.endBatchEdit();
     }
 
     @Override

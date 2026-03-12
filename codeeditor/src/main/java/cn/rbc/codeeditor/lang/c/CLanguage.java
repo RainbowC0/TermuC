@@ -2,6 +2,7 @@ package cn.rbc.codeeditor.lang.c;
 
 import cn.rbc.codeeditor.lang.*;
 import cn.rbc.codeeditor.util.*;
+import java.util.*;
 
 public class CLanguage extends Language{
 	private static Language _theOne = null;
@@ -68,9 +69,19 @@ public class CLanguage extends Language{
 
 	@Override
 	public Lexer newLexer(CharSeqReader reader) {
-        if (lx == null)
-		    lx = new CLexer(reader);
-        else lx.yyreset(reader);
+        if (lx == null) {
+		    CLexer cx = new CLexer(reader);
+		    lx = cx;
+		    int l = keywords.length - 12;
+            Set<String> keys = new HashSet<>();
+            for (int i=0;i<l;i++) {
+                keys.add(keywords[i]);
+            }
+            for (int i=0;i<keynames.length;i++) {
+                keys.add(keynames[i]);
+            }
+            cx.keywords = keys;
+        } else lx.yyreset(reader);
         return lx;
 	}
 }

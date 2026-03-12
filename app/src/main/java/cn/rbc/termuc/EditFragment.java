@@ -19,7 +19,7 @@ import cn.rbc.codeeditor.lang.Formatter;
 import cn.rbc.codeeditor.util.Range;
 
 public class EditFragment extends Fragment
-implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnCaretScrollListener {
+implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnCaretScrollListener, ActionMode.Callback {
 	public final static int
 	TYPE_C = 1,
 	TYPE_CPP = 2,
@@ -27,6 +27,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	TYPE_TXT = 0,
 	TYPE_BLOB = 0x80000000,
 	TYPE_MASK = 3;
+    private final static int ACTION_BASE_ID = 0x80000000;
 	final static String FL = "f", TP = "t", CS = "c", TS = "s", MK = "m", VS = "v";
 	private File fl;
 	private TextEditor ed;
@@ -34,6 +35,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	private String C;
 	private long lastModified;
 	private List<Range> changes = new ArrayList<>();
+    static final Set<String> DEFTYPES = new ArraySet<String>(0);
 
 	public EditFragment() {
 	}
@@ -66,6 +68,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 								   ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         editor.setOnEditedListener(ma);
         editor.addCaretListener(this);
+        editor.setClipboardCallback(this, ClipboardPanel.CREATE_BEFORE|ClipboardPanel.CREATE_AFTER);
         try {
             Document doc = null;
             if (savedInstanceState != null) {
@@ -94,8 +97,8 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
             } else {
                 ma.setEditor(editor);
                 doc = load();
-                if (tp != TYPE_TXT && "s".equals(Application.completion))
-                    Application.getInstance().lsp.didOpen(fl, tp == TYPE_CPP ?"cpp": "c", doc.toString());
+                if ("s".equals(Application.completion))
+                    onOpen();
             } 
         } catch (IOException fnf) {
 			fnf.printStackTrace();
@@ -195,6 +198,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
             lsp.signatureHelpTry(fl, range.enl, range.enc + 1, c.charAt(0), editor.getSigHelpPanel().isShowing());
 			lsp.completionTry(fl, range.enl, range.enc + 1, c.charAt(0));
         }
+        lsp.semanticTokensFull(fl);
 		changes.clear();
 	}
 
@@ -215,16 +219,35 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 			bd.setPositiveButton(android.R.string.ok, this);
 			bd.setNegativeButton(android.R.string.cancel, null);
 			bd.create().show();
-		}
+		} else if ("s".equals(Application.completion)) {// TODO: delay for throttle
+            Set<String> typs = Application.getInstance().hand.cacheData.getOrDefault(fl.toString(), DEFTYPES);
+            Language lang = Tokenizer.getLanguage();
+            if (typs != lang.getTypes()) {
+                lang.setTypes(typs);
+                ed.mCtrlr.determineSpans();
+            }
+        }
 	}
+
+    public void onOpen() {
+        int tp = type & TYPE_MASK;
+        if (tp != TYPE_TXT) {
+            Lsp lsp = Application.getInstance().lsp;
+            lsp.didOpen(fl, tp == TYPE_C ? "c" : "cpp", ed.getText().toString());
+            lsp.semanticTokensFull(fl);
+        }
+    }
 
 	@Override
 	public void onClick(DialogInterface diag, int id) {
 		try {
 			Document cs = load();
             ed.mCtrlr.determineSpans();
-            if ("s".equals(Application.completion))
-			    Application.getInstance().lsp.didChange(fl, 0, cs.toString());
+            if ("s".equals(Application.completion)) {
+			    Lsp lsp = Application.getInstance().lsp;
+                lsp.didChange(fl, 0, cs.toString());
+                lsp.semanticTokensFull(fl);
+            }
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
@@ -270,7 +293,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         Reader rd = new CharSeqReader(doc);
         char[] buf = new char[1024];
         int i;
-        while ((i = rd.read(buf)) > 0) {
+        while ((i = rd.read(buf)) != -1) {
             writer.write(buf, 0, i);
         }
         rd.close();
@@ -294,8 +317,9 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         doc.resetUndos();
         doc.clearSpans();
         doc.analyzeWordWrap();
-		if ((type & TYPE_MASK) != TYPE_TXT && "s".equals(Application.completion))
+		if ((type & TYPE_MASK) != TYPE_TXT && "s".equals(Application.completion)) {
 			doc.setOnTextChangeListener(this);
+        }
 		return doc;
 	}
 
@@ -318,4 +342,136 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 			_tp = TYPE_BLOB;
 		return _tp;
 	}
+/*
+    private void semTokensSend() {
+        Application app = Application.getInstance();
+        Set<String> tk = app.hand.cacheData.getOrDefault(fl.toString(), null);
+        if (tk != null) { // delta
+            //app.lsp.semanticTokensDelta(fl);
+        }
+        app.lsp.semanticTokensFull(fl);
+    }*/
+
+    @Override
+    public boolean onCreateActionMode(ActionMode mode, Menu menu)
+    {
+        if (menu.size() == 0) {
+            TypedArray tv = getContext().getTheme().obtainStyledAttributes(
+                new int[]{
+                    android.R.attr.actionModeFindDrawable
+                });
+            menu.add(0, R.id.search, 0, R.string.find).setIcon(tv.getDrawable(0)).setShowAsActionFlags(2);
+            tv.recycle();
+        } else {
+            menu.findItem(ClipboardPanel.ID_PASTE).setShowAsActionFlags(1);
+        }
+        return false;
+    }
+
+    private List<Command> tActs;
+    void setActions(List<Command> actions) {
+        tActs = actions;
+        ed.getClipboardPanel().invalidate();
+    }
+
+    @Override
+    public boolean onPrepareActionMode(ActionMode p1, Menu p2)
+    {
+        
+        FreeScrollingTextField te = ed;
+        
+        int start = te.getSelectionStart(), end = te.getSelectionEnd();
+        p2.removeGroup(1);
+        List<Command> acts = tActs;
+        int flag = acts == null ? 2 : 1;
+        p2.findItem(R.id.search).setVisible(start != end).setShowAsActionFlags(flag);
+        p2.findItem(ClipboardPanel.ID_SELECTALL).setShowAsActionFlags(flag);
+        p2.findItem(ClipboardPanel.ID_CUT).setShowAsActionFlags(flag);
+        p2.findItem(ClipboardPanel.ID_COPY).setShowAsActionFlags(flag);
+        if (acts != null) {
+            // final int flag = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M ? 1 : 2;
+            for (int i = 0, l = acts.size(); i<l; i++) {
+                int id = i + ACTION_BASE_ID;
+                p2.add(1, id, 0, acts.get(i).title).setShowAsActionFlags(2);
+            }
+            p1.setTag(acts);
+            tActs = null;
+            return true;
+        }
+        List<ErrSpan> dg;
+        if ((dg = ed.getText().getDiag()) != null && dg.size()>0) {
+            // before
+            Lsp lsp = Application.getInstance().lsp;
+            int stl, stc, enl, enc;
+            Document doc = te.getText();
+            if (doc.isWordWrap()) {
+                stl = doc.findLineNumber(start);
+                stc = doc.getLineOffset(stl);
+                enl = doc.findLineNumber(end);
+                enc = doc.getLineOffset(enl);
+            } else {
+                stl = doc.findRowNumber(start);
+                stc = doc.getRowOffset(stl);
+                enl = doc.findRowNumber(end);
+                enc = doc.getRowOffset(enl);
+            }
+            Range rng = new Range();
+            rng.stl = stl;
+            rng.stc = start -= stc;
+            rng.enl = enl;
+            rng.enc = end - enc;
+            stl += 1;
+
+            int y = dg.size() - 1;
+            int x = 0;
+            ErrSpan errspan;
+            while (x < y) {
+                int m = (x + y) >> 1;
+                errspan = dg.get(m);
+                if (errspan.enl > stl || errspan.enl == stl && errspan.enc >= start)
+                    y = m;
+                else
+                    x = m + 1;
+            }
+            errspan = dg.get(y);
+            if ((errspan.stl < stl || errspan.stl == stl && errspan.stc <= end)
+                && (stl < errspan.enl || stl == errspan.enl && start <= errspan.enc)
+                && errspan.msg != null) {
+                lsp.codeAction(fl, rng, dg.subList(y,y+1));
+                HelperUtils.show(Toast.makeText(te.getContext(), "sended", 1));
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public boolean onActionItemClicked(ActionMode p1, MenuItem p2)
+    {
+        int id = p2.getItemId();
+        switch (id) {
+            case R.id.search:
+                ed.getText().setHighlights(null);
+                MainActivity ma = (MainActivity)getActivity();
+                ma.onOptionsItemSelected(p2);
+                p1.finish();
+                break;
+            default:
+                id -= ACTION_BASE_ID;
+                if (id < 0)
+                    break;
+                List<Command> cmds = (List<Command>)p1.getTag();
+                if (cmds != null && id < cmds.size()) {
+                    Application.getInstance().lsp.executeCommand(cmds.get(id));
+                    p1.finish();
+                }
+                break;
+        }
+        return true;
+    }
+
+    @Override
+    public void onDestroyActionMode(ActionMode p1)
+    {
+        p1.setTag(null);
+    }
 }

@@ -11,7 +11,7 @@ import android.widget.Filter;
 import android.widget.ListPopupWindow;
 import android.widget.TextView;
 
-import cn.rbc.termuc.R;
+import cn.rbc.codeeditor.R;
 import cn.rbc.codeeditor.lang.Language;
 import cn.rbc.codeeditor.lang.LanguageNonProg;
 import cn.rbc.codeeditor.view.FreeScrollingTextField;
@@ -27,7 +27,6 @@ import android.os.*;
 
 public class AutoCompletePanel implements OnItemClickListener {
 
-    public static Language _globalLanguage = LanguageNonProg.getInstance();
     public int _off;
     private FreeScrollingTextField _textField;
     private Context _context;
@@ -47,14 +46,6 @@ public class AutoCompletePanel implements OnItemClickListener {
         _textField = textField;
         _context = textField.getContext();
         initAutoCompletePanel();
-    }
-
-    synchronized public static Language getLanguage() {
-        return _globalLanguage;
-    }
-
-    synchronized public static void setLanguage(Language lang) {
-        _globalLanguage = lang;
     }
 
     public void setTextColor(int color) {

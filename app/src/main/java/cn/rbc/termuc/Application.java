@@ -2,10 +2,10 @@ package cn.rbc.termuc;
 import android.content.*;
 import android.graphics.*;
 import android.preference.*;
+import android.net.*;
 import android.util.*;
 import cn.rbc.codeeditor.util.*;
 import java.util.*;
-import android.net.*;
 
 public class Application extends android.app.Application {
 	final static String
@@ -38,6 +38,7 @@ public class Application extends android.app.Application {
     Uri treeUri;
     private Map<String,Document> ls;
     private static Application app;
+    private static Typeface customTypeface;
 
 	@Override
 	public void onCreate() {
@@ -53,7 +54,9 @@ public class Application extends android.app.Application {
         lsp.end();
         ls.clear();
         super.onTerminate();
+        ls = null;
         app = null;
+        customTypeface = null;
     }
 
     void store(String key, Document obj) {
@@ -105,9 +108,13 @@ public class Application extends android.app.Application {
 			return "n".equals(font) ? Typeface.SANS_SERIF
 				: "s".equals(font) ? Typeface.SERIF
 				: "m".equals(font) ? Typeface.MONOSPACE
-				: Typeface.createFromFile(font);
+				: customTypeface == null ? (customTypeface = Typeface.createFromFile(font)) : customTypeface;
 		} catch (RuntimeException re) {
 			return Typeface.MONOSPACE;
 		}
 	}
+
+    static void clearCache() {
+        customTypeface = null;
+    }
 }

@@ -8,21 +8,33 @@ import cn.rbc.codeeditor.view.*;
 import cn.rbc.codeeditor.view.autocomplete.*;
 import java.io.*;
 import java.util.*;
+import org.json.*;
 
 import static android.util.JsonToken.*;
 
-public class MainHandler extends Handler implements Comparator<ErrSpan> {
-	private MainActivity ma;
+import cn.rbc.codeeditor.util.Range;
+import cn.rbc.codeeditor.util.Pair;
+import android.view.*;
+
+public class MainHandler extends Handler {
 	private static final String
     ACTSIG = "activeSignature",
 	ADDEDIT = "additionalTextEdits",
+    ARGS = "arguments",
 	CAPA = "capabilities",
+    CHANGES = "changes",
+    CODE = "code",
+    CMD = "command",
 	COMPLE = "completionProvider",
+    DAT = "data",
 	DG = "diagnostics",
+    EDIT = "edit",
 	END = "end",
+    ID = "id",
 	IT = "items",
 	KIND = "kind",
 	LABEL = "label",
+    LEGEND = "legend",
 	L = "line",
 	MSG = "message",
 	NEWTX = "newText",
@@ -30,15 +42,22 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 	RNG = "range",
 	RESU = "result",
 	SEVE = "severity",
+    SEMTOK = "semanticTokensProvider",
     SGNHELP = "signatureHelpProvider",
     SIGS = "signatures",
 	TEDIT = "textEdit",
+    TITLE = "title",
+    TOKTYPE = "tokenTypes",
 	TG = "triggerCharacters",
 	URI = "uri";
+    private MainActivity ma;
+    final WeakHashMap<String, Set<String>> cacheData;
+    private int oldHash;
 
 	MainHandler(MainActivity ma) {
 		super();
 		this.ma = ma;
+        cacheData = new WeakHashMap<>();
 	}
 
 	void updateActivity(MainActivity ma) {
@@ -53,7 +72,10 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 				lsp.initialized();
 				break;
 			case Lsp.ERROR:
-				synchronized(this) {
+                synchronized(this) {
+                    cacheData.clear();
+                    Tokenizer.getLanguage().setTypes(EditFragment.DEFTYPES);
+                    if (ma == null) return;
 					FragmentManager fm = ma.getFragmentManager();
 					for (int i=ma.getActionBar().getNavigationItemCount()-1;i>=0;i--) {
 						Fragment f = fm.findFragmentByTag(ma.getTag(i));
@@ -62,7 +84,8 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 						Document doc = te.getText();
 						doc.setDiag(null);
 						doc.setHighlights(null);
-						te.invalidate();
+                        if (f.isVisible())
+						    te.postInvalidateOnAnimation();
 					}
 				}
 				return;
@@ -73,13 +96,15 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 			JsonReader jr = (JsonReader)msg.obj;
 			jr.beginObject();
 			Deque<String> stack = new ArrayDeque<>();
-			int sl = 0, sc = 0, el = 0, ec = 0;
+			int id = -1, sl = 0, sc = 0, el = 0, ec = 0;
 			Object tmp1 = null, tmp2 = null, tmp3 = null;
 			while (true) {
 				switch (jr.peek()) {
 					case NAME:
 						String n = jr.nextName();
 						switch (n) {
+                            // Assuming we parse the id first than the body
+                            case ID: id = jr.nextInt(); break;
 							case NEWTX:
 								n = jr.nextString();
 								if (tmp3 instanceof Edit)
@@ -93,18 +118,32 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
                                 else if (SIGS.equals(stack.peek()))
                                     ((List)tmp1).add(n);
 								break;
-							case KIND:
+							case KIND: {
+                                int i = jr.nextInt();
 								if (tmp2 instanceof ListItem)
-									((ListItem)tmp2).kind = jr.nextInt();
+									((ListItem)tmp2).kind = i;
 								break;
+                            }
 							case MSG:
+                                n = jr.nextString();
 								if (tmp2 instanceof ErrSpan)
-									((ErrSpan)tmp2).msg = jr.nextString();
+									((ErrSpan)tmp2).msg = n;
 								break;
-							case SEVE:
-								if (tmp2 instanceof ErrSpan)
-									((ErrSpan)tmp2).severity = jr.nextInt() - 1;
+							case SEVE: {
+                                int i = jr.nextInt();
+								if (tmp2 instanceof ErrSpan) {
+									((ErrSpan)tmp2).severity = i - 1;
+                                }
 								break;
+                            }
+                            case CODE:
+                                if (tmp2 instanceof Diagnostic) {
+                                    if (jr.peek() == JsonToken.STRING)
+                                        ((Diagnostic)tmp2).code = jr.nextString();
+                                    else
+                                        ((Diagnostic)tmp2).code = jr.nextLong();
+                                } else jr.skipValue();
+                                break;
 							case IT:
 							case DG:
                             case SIGS:
@@ -126,17 +165,22 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
                                 } else {
                                     jr.close();
                                     lsp.setSigTrigs(trigs);
-                                    // what == Lsp.INITIALIZE
-                                    FragmentManager fm = ma.getFragmentManager();
-                                    for (int i=ma.getActionBar().getNavigationItemCount()-1;i>=0;i--) {
-                                        EditFragment ef = (EditFragment)fm.findFragmentByTag(ma.getTag(i));
-                                        int tp = ef.type&EditFragment.TYPE_MASK;
-                                        if (tp != EditFragment.TYPE_TXT)
-                                            lsp.didOpen(ef.getFile(), tp==EditFragment.TYPE_CPP?"cpp":"c", ((TextEditor)ef.getView()).getText().toString());
-								    }
                                     return;
                                 }
+                            case TOKTYPE:
+                                jr.beginArray();
+                                List<Lsp.SemToken> toks = new ArrayList<>();
+                                while (jr.hasNext()) {
+                                    toks.add(Lsp.semValueOf(jr.nextString().toUpperCase()));
+                                }
+                                jr.endArray();
+                                lsp.setSemToks(toks.toArray(new Lsp.SemToken[toks.size()]));
+                                break;
 							case RNG:
+                                if (SEMTOK.equals(stack.peek())) {
+                                    jr.skipValue();
+                                    break;
+                                }
 								jr.beginObject();
 								while (jr.hasNext()) {
 									String tp = jr.nextName();
@@ -160,7 +204,7 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 							case RESU:
 								if (jr.peek()==BEGIN_ARRAY) {
 									jr.beginArray();
-									tmp2 = new ArrayList<Edit>();
+									tmp2 = new ArrayList();
 								} else if (jr.peek()==NULL)
 									jr.nextNull();
 								else
@@ -171,6 +215,7 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
                                 tmp3 = jr.nextString();
 								if (DG.equals(stack.peek())) {
 									updateDiag((String)tmp3, (List<ErrSpan>)tmp1);
+                                    jr.close();
                                     return;
 								}
 								break;
@@ -178,15 +223,59 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 								tmp3 = new Edit();
 							case COMPLE:
                             case SGNHELP:
+                            case SEMTOK:
+                            case LEGEND:
 							case CAPA:
 							case PARA:
+                            case EDIT:
 								jr.beginObject();
 								stack.push(n);
 								break;
                             case ACTSIG:
                                 sl = jr.nextInt();
                                 break;
+                            case TITLE:
+                                n = jr.nextString();
+                                if (tmp3 instanceof Command)
+                                    ((Command)tmp3).title = n;
+                                break;
+                            case CMD:
+                                n = jr.nextString();
+                                if (tmp3 instanceof Command)
+                                    ((Command)tmp3).command = n;
+                                break;
+                            case ARGS:
+                                if (tmp3 instanceof Command) {
+                                    ((Command)tmp3).args = nextValue(jr);
+                                } else jr.skipValue();
+                                break;
+                            case CHANGES:
+                                jr.beginObject();
+                                stack.push(n);
+                                tmp2 = null;
+                                break;
+                            case DAT:
+                                if (id == Lsp.SEMTOK) {
+                                    Set<String> typs = parseSemTokens(lsp, jr);
+                                    jr.close();
+                                    cacheData.put(ma.getTag(ma.getActionBar().getSelectedNavigationIndex()), typs);
+                                    sc = typs.hashCode();
+                                    if (oldHash != sc) {
+                                        Tokenizer.getLanguage().setTypes(typs);
+                                        ma.getEditor().postInvalidateOnAnimation();
+                                        oldHash = sc;
+                                    }
+                                    return;
+                                }
+                                jr.skipValue();
+                                break;
 							default:
+                                if (CHANGES.equals(stack.peek()) && n.startsWith("file://")) {
+                                    tmp2 = n;
+                                    jr.beginArray();
+                                    tmp1 = new ArrayList();
+                                    break;
+                                }
 								jr.skipValue();
 								break;
 						}
@@ -195,16 +284,23 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 						jr.beginObject();
 						if (!stack.isEmpty()) {
 						switch (stack.peek()) {
+                            case RESU:
+                                if (id == Lsp.CODEACTION) {
+                                    tmp3 = new Command();
+                                    break;
+                                }
 							case ADDEDIT:
-							case RESU:
 								tmp3 = new Edit();
 								break;
 							case IT:
 								tmp2 = new ListItem();
 								break;
 							case DG:
-								tmp2 = new ErrSpan();
+								tmp2 = new Diagnostic();
 								break;
+                            case CHANGES:
+                                tmp3 = new Edit();
+                                break;
 						}
 						}
 						break;
@@ -219,7 +315,12 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
                                     if (ls.size() > sl)
                                         sp.show(ls, sl);
                                     else sp.hide();
+                                    jr.close();
                                     return;
+                                }
+                                if (tmp3 instanceof Command) {
+                                    ((List)tmp2).add(tmp3);
+                                    break;
                                 }
                             case ADDEDIT:
 								if (!(tmp3 instanceof Edit))
@@ -256,6 +357,20 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 								break;
                             case SIGS:
                                 break;
+                            case CHANGES:
+                                if (tmp3 instanceof Edit) {
+                                    if (tmp2 instanceof String) {
+                                        Edit p = (Edit)tmp3;
+                                        te = ma.getEditor().getText();
+                                        p.start = te.getLineOffset(sl) + sc;
+                                        p.len = te.getLineOffset(el) + ec - p.start;
+                                        ((List)tmp1).add(p);
+                                    } else {
+                                        lsp.reply(id, "{\"applied\":true}");
+                                        jr.close();
+                                    }
+                                }
+                                break;
 							default:
 								stack.pop();
 						}
@@ -281,35 +396,34 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
                                 break;
 							case RESU:
 								jr.close();
-								List<Edit> l = (List<Edit>)tmp2;
+								List l = (List)tmp2;
 								TextEditor te = ma.getEditor();
 								Document doc = te.getText();
-								if (l.size() > 0) {
-									if (l.get(0).text == null) {
+								if (tmp3 instanceof Edit) {
+                                    if (((Edit)l.get(0)).text == null) {
 										doc.setHighlights(l);
-										te.invalidate();
+										te.postInvalidateOnAnimation();
 									} else {
-										doc.beginBatchEdit();
-										long tpl = System.nanoTime();
-										int mc = te.getCaretPosition();
-										for (int i=l.size()-1; i>=0; i--) {
-											Edit e = l.get(i);
-											doc.deleteAt(e.start, e.len, tpl);
-											doc.insertBefore(e.text.toCharArray(), e.start, tpl);
-											if (e.start + e.len <= mc)
-												mc += e.text.length() - e.len;
-											else if (e.start < mc)
-												mc = e.start + e.text.length();
-										}
-										doc.endBatchEdit();
-										te.moveCaret(mc);
-										te.mCtrlr.determineSpans();
+                                        applyEdit(te, (List<Edit>)l);
 									}
-								} else if (doc.getHighlights() != null) {
+								} else if (tmp3 instanceof Command) {
+                                    int tit = ma.getActionBar().getSelectedNavigationIndex();
+                                    EditFragment frag = (EditFragment)ma.getFragmentManager().getFragments().get(tit);
+                                    frag.setActions(l);
+                                } else if (doc.getHighlights() != null) {
 									doc.setHighlights(null);
-									te.invalidate();
+									te.postInvalidateOnAnimation();
 								}
 								return;
+                            case CHANGES:
+                                if (tmp2 instanceof String) {
+                                    String t = ((String)tmp2).substring(7);
+                                    EditFragment frag = (EditFragment)ma.getFragmentManager().findFragmentByTag(t);
+                                    TextEditor ed = (TextEditor)frag.getView();
+                                    applyEdit(ed, (List<Edit>)tmp1);
+                                    tmp2 = null;
+                                }
+                                break;
 						}
 						break;
 					case END_DOCUMENT:
@@ -319,13 +433,10 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
 						jr.skipValue();
 				}
 			}
-		} catch (IOException j) {
-			Log.e("LSP", j.getMessage());
+		} catch (Exception j) {
+			Log.e("LSP", j.toString(), j);
+            //j.printStackTrace(pw);
 		}
-	}
-
-	public int compare(ErrSpan p1, ErrSpan p2) {
-		return p1.stl - p2.stl;
 	}
 
     private void updateDiag(String uri, List<ErrSpan> list) {
@@ -334,9 +445,109 @@ public class MainHandler extends Handler implements Comparator<ErrSpan> {
         if (f==null)
             return;
         TextEditor te = (TextEditor)f.getView();
-        Collections.sort(list, this);
+        Collections.sort(list);
         te.getText().setDiag(list);
-        te.invalidate();
+        te.postInvalidateOnAnimation();
         return;
+    }
+
+    private static String nextValue(JsonReader rd) throws IOException {
+        StringBuilder sb = new StringBuilder();
+        int st = 0;
+        do {
+            switch (rd.peek()) {
+                case BEGIN_ARRAY:
+                    sb.append('[');
+                    rd.beginArray();
+                    st++;
+                    break;
+                case BEGIN_OBJECT:
+                    sb.append('{');
+                    rd.beginObject();
+                    st++;
+                    break;
+                case END_ARRAY:
+                    if (sb.charAt(sb.length()-1) == ',')
+                        sb.deleteCharAt(sb.length()-1);
+                    sb.append("],");
+                    rd.endArray();
+                    st--;
+                    break;
+                case END_OBJECT:
+                    if (sb.charAt(sb.length()-1) == ',')
+                        sb.deleteCharAt(sb.length()-1);
+                    sb.append("},");
+                    rd.endObject();
+                    st--;
+                    break;
+                case NUMBER: sb.append(rd.nextLong()); sb.append(','); break;
+                case STRING: sb.append(JSONObject.quote(rd.nextString())); sb.append(','); break;
+                case NAME: sb.append('"'); sb.append(rd.nextName()); sb.append("\":"); break;
+                case BOOLEAN: sb.append(rd.nextBoolean()); sb.append(","); break;
+                case END_DOCUMENT: break;
+            }
+        } while (st > 0);
+        int l = sb.length()-1;
+        if (sb.charAt(l) == ',')
+            sb.deleteCharAt(l);
+        return sb.toString();
+    }
+
+    private static void applyEdit(TextEditor te, List<Edit> edits) {
+        Document doc = te.getText();
+        doc.beginBatchEdit();
+        long tpl = System.nanoTime();
+        int mc = te.getCaretPosition();
+        for (int i = edits.size()-1; i>=0; i--) {
+            Edit e = edits.get(i);
+            doc.deleteAt(e.start, e.len, tpl);
+            doc.insertBefore(e.text.toCharArray(), e.start, tpl);
+            if (e.start + e.len <= mc)
+                mc += e.text.length() - e.len;
+            else if (e.start < mc)
+                mc = e.start + e.text.length();
+        }
+        doc.endBatchEdit();
+        te.setSelection(mc);
+        te.setEdited(doc.getMarkedVersion() != doc.getCurrentVersion());
+        te.mCtrlr.determineSpans();
+    }
+
+    private Set<String> parseSemTokens(Lsp lsp, JsonReader jr) throws IOException {
+        jr.beginArray();
+        MainActivity m = ma;
+        TextEditor te = m.getEditor();
+        Document doc = te.getText();
+        List<Pair> spans = doc.getSpans();
+        int curr = 0;
+        int line = 0, pos = 0;
+        final int dlen = doc.length();
+        Set<String> tps =new ArraySet<>();
+        while (jr.hasNext()) {
+            int deltaLine = jr.nextInt();
+            line += deltaLine;
+            if (deltaLine != 0) pos = doc.getLineOffset(line);
+            int deltaStart = jr.nextInt(), len = jr.nextInt(), tok = jr.nextInt();
+            jr.nextInt();
+            pos += deltaStart;
+            int rpos = doc.logicalToRealIndex(pos);
+            while (curr < spans.size()) {
+                Pair p = spans.get(curr++);
+                if (p.first >= rpos) {
+                    if (p.first == rpos && (curr == spans.size() || spans.get(curr).first == doc.logicalToRealIndex(pos+len))) {
+                        tok = lsp.nativeToken(tok);
+                        if (tok != Tokenizer.UNKNOWN) {
+                            p.second = tok;
+                            if (tok == Tokenizer.TYPE)
+                                tps.add(doc.subSequence(pos, Math.min(dlen, pos+len)).toString());
+                        }
+                        curr++;
+                    }
+                    break;
+                }
+            }
+        }
+        jr.endArray();
+        return tps;
     }
 }

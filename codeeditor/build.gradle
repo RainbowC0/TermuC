@@ -1,7 +1,7 @@
 apply plugin: 'com.android.library'
 
 android {
-    namespace 'cn.rbc.termuc'
+    namespace 'cn.rbc.codeeditor'
     compileSdk 34
 
     defaultConfig {
