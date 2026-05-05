@@ -21,7 +21,7 @@ public final class Lsp implements Runnable {
     FORMAT = 10, HIGHLIGHT = 11, CODEACTION = 12, EXECCMD = 13, SEMTOK = 14,
     SEMTOKD = 15,
 	ERROR = -1;
-    final static enum SemToken {
+    static enum SemToken {
         NAMESPACE, TYPE, CLASS, ENUM, INTERFACE, STRUCT, TYPEPARAMETER, PARAMETER, VARIABLE, PROPERTY, ENUMMEMBER, EVENT, FUNCTION, METHOD, MACRO, KEYWORD, MODIFIER, COMMENT, STRING, NUMBER, REGEXP, OPERATOR, UNKNOWN
     };
 	private final static String TAG = "LSP";

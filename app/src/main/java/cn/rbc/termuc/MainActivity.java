@@ -249,7 +249,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 		PopupMenu pm = new PopupMenu(MainActivity.this, v);
 		Menu _m = pm.getMenu();
 		transStr = adp.getItem(i - 1).name;
-		_m.add(Menu.NONE, R.id.delete, Menu.NONE, R.string.delete).setOnMenuItemClickListener(this);
+		_m.add(Menu.NONE, R.id.delete, Menu.NONE, cn.rbc.codeeditor.R.string.delete).setOnMenuItemClickListener(this);
         _m.add(Menu.NONE, R.id.rename, Menu.NONE, R.string.rename).setOnMenuItemClickListener(this);
 		pm.show();
 		return true;
@@ -358,7 +358,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 		}
 		Builder bd = new Builder(this);
 		if (id == R.id.delete) {
-			bd.setTitle(R.string.delete);
+			bd.setTitle(cn.rbc.codeeditor.R.string.delete);
 			bd.setMessage(getString(R.string.confirm_delete, transStr));
 			bd.setPositiveButton(android.R.string.ok, this);
 			transZ = false;
