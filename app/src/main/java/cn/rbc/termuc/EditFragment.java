@@ -197,8 +197,8 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 		Lsp lsp = Application.getInstance().lsp;
 		lsp.didChange(fl, ++mVer, changes);
 		// when inserting text and typing, call for completion
-		if (ins && typ && c.length() == 1
-           && !lsp.signatureHelpTry(fl, range.enl, range.enc + 1, c.charAt(0), editor.getSigHelpPanel().isShowing())) {
+		if (ins && typ && c.length() == 1) {
+            lsp.signatureHelpTry(fl, range.enl, range.enc + 1, c.charAt(0), editor.getSigHelpPanel().isShowing());
 			lsp.completionTry(fl, range.enl, range.enc + 1, c.charAt(0));
         }
         lsp.semanticTokensFull(fl);
