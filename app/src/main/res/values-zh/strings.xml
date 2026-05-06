@@ -97,6 +97,7 @@
     <string name="with_format">生成 .clang-format</string>
     <string name="empty_name">名称为空！</string>
     <string name="replace">替换</string>
+    <string name="goto_">跳转</string>
 	<string name="cont">继续</string>
 	<string name="pause">暂停</string>
 	<string name="skip">步过</string>

@@ -50,9 +50,7 @@ public class KeysInterpreter {
     }
 
     private static boolean isTab(KeyEvent event) {
-        return (event.isShiftPressed() &&
-                (event.getKeyCode() == KeyEvent.KEYCODE_SPACE)) ||
-                (event.getKeyCode() == KeyEvent.KEYCODE_TAB);
+        return (event.getKeyCode() == KeyEvent.KEYCODE_TAB);
     }
 
     private static boolean isBackspace(KeyEvent event) {

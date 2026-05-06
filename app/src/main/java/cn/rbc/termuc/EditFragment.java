@@ -119,8 +119,11 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 
 	@Override
 	public void updateCaret(int caretIndex) {
+        if (!"s".equals(Application.completion)) return;
 		Document text = ed.getText();
-		if (ed.isSelectText2()) {
+		if (ed.isSelectText2()
+            || !(Character.isUnicodeIdentifierPart(text.charAt(caretIndex))
+            || caretIndex>0 && Character.isUnicodeIdentifierPart(text.charAt(caretIndex-1)))) {
 			text.setHighlights(null);
 			return;
 		}
@@ -194,8 +197,8 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 		Lsp lsp = Application.getInstance().lsp;
 		lsp.didChange(fl, ++mVer, changes);
 		// when inserting text and typing, call for completion
-		if (ins && typ && c.length() == 1) {
-            lsp.signatureHelpTry(fl, range.enl, range.enc + 1, c.charAt(0), editor.getSigHelpPanel().isShowing());
+		if (ins && typ && c.length() == 1
+           && !lsp.signatureHelpTry(fl, range.enl, range.enc + 1, c.charAt(0), editor.getSigHelpPanel().isShowing())) {
 			lsp.completionTry(fl, range.enl, range.enc + 1, c.charAt(0));
         }
         lsp.semanticTokensFull(fl);
@@ -364,6 +367,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
             tv.recycle();
         } else {
             menu.findItem(ClipboardPanel.ID_PASTE).setShowAsActionFlags(1);
+            menu.add(0, R.id.goto_, 0, R.string.goto_).setShowAsActionFlags(1);
         }
         return false;
     }
@@ -389,7 +393,6 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         p2.findItem(ClipboardPanel.ID_CUT).setShowAsActionFlags(flag);
         p2.findItem(ClipboardPanel.ID_COPY).setShowAsActionFlags(flag);
         if (acts != null) {
-            // final int flag = android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.M ? 1 : 2;
             for (int i = 0, l = acts.size(); i<l; i++) {
                 int id = i + ACTION_BASE_ID;
                 p2.add(1, id, 0, acts.get(i).title).setShowAsActionFlags(2);
@@ -438,7 +441,6 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
                 && (stl < errspan.enl || stl == errspan.enl && start <= errspan.enc)
                 && errspan.msg != null) {
                 lsp.codeAction(fl, rng, dg.subList(y,y+1));
-                HelperUtils.show(Toast.makeText(te.getContext(), "sended", 1));
             }
         }
         return true;
@@ -449,6 +451,16 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
     {
         int id = p2.getItemId();
         switch (id) {
+            case R.id.goto_:
+                if ("s".equals(Application.completion)) {
+                    int pos = ed.getCaretPosition();
+                    Document doc = ed.getText();
+                    int line = doc.findLineNumber(pos);
+                    int off = pos-doc.getLineOffset(line);
+                    Application.getInstance().lsp.definition(fl, line, off);
+                }
+                p1.finish();
+                break;
             case R.id.search:
                 ed.getText().setHighlights(null);
                 MainActivity ma = (MainActivity)getActivity();

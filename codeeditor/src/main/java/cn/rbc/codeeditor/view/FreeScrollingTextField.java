@@ -466,6 +466,7 @@ DialogInterface.OnDismissListener, Runnable {
         setLongClickable(true);
         setFocusableInTouchMode(true);
         setHapticFeedbackEnabled(true);
+        setDefaultFocusHighlightEnabled(false);
         setColorScheme(ColorSchemeLight.getInstance());
 		mSpaceWidth = (int)mTextPaint.measureText(" ");
 		mCursorWidth = (int)(HelperUtils.getDpi(mContext) * 1.5f);
@@ -870,7 +871,7 @@ DialogInterface.OnDismissListener, Runnable {
 			if (currLineNum != lastLineNum) {
 				if (showLN) {
                     ColorScheme.Colorable ca;
-                    if (mI < hDoc.getMarksCount() && hDoc.getMark(mI) == currLineNum) {
+                    if (mI < hDoc.getMarksCount() && hDoc.getMark(mI) == currLineNum && isFocused()) {
                         mLineBrush.setColor(0xffa00000);
                         canvas.drawRect(0, rowheight * currRowNum, mLeftOffset - (mSpaceWidth >> 1), rowheight * (currRowNum + 1), mLineBrush);
                         ca = ColorScheme.Colorable.SELECTION_FOREGROUND;
@@ -969,7 +970,7 @@ DialogInterface.OnDismissListener, Runnable {
                     currState = newState;
                 }
                // if (i==rowEnd) break;
-                if (currIndex == mCaretPosition && i<rowEnd && isCursorVisible) {
+                if (currIndex == mCaretPosition && i<rowEnd && isCursorVisible && isFocused()) {
                 //draw cursor
                     markCaret(r, paintY);
                     markedCaret = true;

@@ -207,6 +207,7 @@ public class YoyoNavigationMethod extends TouchNavigationMethod implements OnCar
 	@Override
 	public void onTextDrawComplete(Canvas canvas) {
 		FreeScrollingTextField fld = mTextField;
+        if (!fld.isFocused()) return;
         if (!fld.isSelectText2()) {
 			mYoyoCaret.show();
 			mYoyoStart.hide();

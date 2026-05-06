@@ -97,6 +97,7 @@
     <string name="with_format">With .clang-format</string>
     <string name="empty_name">Empty name!</string>
     <string name="replace">Replace</string>
+    <string name="goto_">Goto</string>
 	<string name="cont">Continue</string>
 	<string name="pause">Pause</string>
 	<string name="skip">Next line</string>

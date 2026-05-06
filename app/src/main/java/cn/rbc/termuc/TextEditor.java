@@ -79,7 +79,6 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
     }
 
     public static void setLanguage(Language language) {
-        //AutoCompletePanel.setLanguage(language);
         Tokenizer.setLanguage(language);
     }
 
@@ -225,7 +224,6 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
         mEditedListener = edlis;
     }
 
-
     public void updateCaret(int caretIndex) {
         ((YoyoNavigationMethod)mNavMethod).updateCaret(caretIndex);
         if (mCrtLis != null)
@@ -235,6 +233,29 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
 	public void addCaretListener(OnCaretScrollListener crtlis) {
 		mCrtLis = crtlis;
 	}
+
+    @Override
+    public boolean onGenericMotionEvent(MotionEvent ev) {
+        int pos;
+        if ("s".equals(Application.completion)
+            && ev.getActionMasked() == MotionEvent.ACTION_BUTTON_PRESS
+            && ev.getButtonState() == MotionEvent.BUTTON_PRIMARY
+            && (ev.getMetaState() & KeyEvent.META_CTRL_ON) != 0
+            && (pos = coordToCharIndex(
+            (int)ev.getX()-getPaddingLeft()+getScrollX(),
+            (int)ev.getY()-getPaddingTop()+getScrollY())) >= 0
+        ) {
+            Document doc = hDoc;
+            int line = doc.findLineNumber(pos);
+            pos -= doc.getLineOffset(line);
+            MainActivity act = (MainActivity)getContext();
+            String fl = act.getTag(act.getActionBar().getSelectedNavigationIndex());
+            Application.getInstance().lsp.definition(new File(fl), line, pos);
+            ((EditorNavigationMethod)mNavMethod).intercept = true;
+            return true;
+        }
+        return super.onGenericMotionEvent(ev);
+    }
     /*
      public void open(String filename) {
      _lastSelectFile = filename;
@@ -260,6 +281,7 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
      }
 
      private static class EditorNavigationMethod extends YoyoNavigationMethod {
+         protected boolean intercept;
          EditorNavigationMethod(FreeScrollingTextField fld) {
              super(fld);
          }
@@ -313,6 +335,26 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
                  }
              }
              return ret;
+         }
+
+         @Override
+         public void onLongPress(MotionEvent e)
+         {
+             if (intercept) {
+                 intercept = false;
+                 return;
+             }
+             super.onLongPress(e);
+         }
+
+         @Override
+         public boolean onSingleTapUp(MotionEvent e)
+         {
+             if (intercept) {
+                 intercept = false;
+                 return true;
+             }
+             return super.onSingleTapUp(e);
          }
      }
 }

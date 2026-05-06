@@ -14,11 +14,14 @@ To support the full functions as an IDE, please follow the setup instruction.
 <b>Features</b>
 
 ✅ Highlighting
-✅ Autocompletion
+✅ Auto-completion
 ✅ Signature help
 ✅ Formatting
-✅ Diagnose
+✅ Diagnosing
+✅ Code action
+✅ Semantic highlighting
+✅ Goto definition
 ✅ Compile flags
 ✅ Dark mode
-✅ Debug
+✅ Debugging
 ✅ Project management

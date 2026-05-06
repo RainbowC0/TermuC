@@ -1,0 +1,5 @@
+• Implement textDocument/codeAction
+• Implement textDocument/semanticTokens/full
+• Support goto-definition via textDocument/definition
+• Fix lexing C++ raw string
+• Fix focused background highlighting for tablet

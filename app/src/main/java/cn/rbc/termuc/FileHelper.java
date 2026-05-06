@@ -9,7 +9,7 @@ import java.util.*;
 import static android.provider.DocumentsContract.Document.*;
 
 public class FileHelper {
-	
+
 	public static boolean isTermuxFile(File f) {
 		return f.getAbsolutePath().startsWith("/data/data/com.termux");
 	}

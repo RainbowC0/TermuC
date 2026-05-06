@@ -218,6 +218,11 @@ public class MainHandler extends Handler {
                                     jr.close();
                                     return;
 								}
+                                if (id == Lsp.DEFIN) {
+                                    jr.close();
+                                    performGoto((String)tmp3, sl, sc);
+                                    return;
+                                }
 								break;
 							case TEDIT:
 								tmp3 = new Edit();
@@ -311,7 +316,9 @@ public class MainHandler extends Handler {
 							case RESU:
                                 if (sc == -1) { // signature flag
                                     List<String> ls = (List<String>)tmp1;
-                                    SignatureHelpPanel sp = ma.getEditor().getSigHelpPanel();
+                                    TextEditor ed = ma.getEditor();
+                                    ed.getAutoCompletePanel().dismiss();
+                                    SignatureHelpPanel sp = ed.getSigHelpPanel();
                                     if (ls.size() > sl)
                                         sp.show(ls, sl);
                                     else sp.hide();
@@ -384,9 +391,15 @@ public class MainHandler extends Handler {
 							case ADDEDIT:
 								stack.pop();
 								break;
-							case IT:
-								ma.getEditor().getAutoCompletePanel().update((ArrayList<ListItem>)tmp1);
+							case IT: {
+                                TextEditor ed = ma.getEditor();
+								AutoCompletePanel pan = ed.getAutoCompletePanel();
+                                pan.update((ArrayList<ListItem>)tmp1);
+                                if (pan.isShow()) {
+                                    ed.getSigHelpPanel().hide();
+                                }
 								return;
+                            }
 							case DG:
                                 if (tmp3 instanceof String) {
                                     jr.close();
@@ -408,7 +421,7 @@ public class MainHandler extends Handler {
 									}
 								} else if (tmp3 instanceof Command) {
                                     int tit = ma.getActionBar().getSelectedNavigationIndex();
-                                    EditFragment frag = (EditFragment)ma.getFragmentManager().getFragments().get(tit);
+                                    EditFragment frag = (EditFragment)ma.getFragmentManager().findFragmentByTag(ma.getTag(tit));
                                     frag.setActions(l);
                                 } else if (doc.getHighlights() != null) {
 									doc.setHighlights(null);
@@ -436,7 +449,7 @@ public class MainHandler extends Handler {
 		} catch (Exception j) {
 			Log.e("LSP", j.toString(), j);
             //j.printStackTrace(pw);
-		}
+	    }
 	}
 
     private void updateDiag(String uri, List<ErrSpan> list) {
@@ -549,5 +562,25 @@ public class MainHandler extends Handler {
         }
         jr.endArray();
         return tps;
+    }
+
+    private void performGoto(String uri, int line, int off) {
+        uri = uri.substring(7);
+        if (uri.startsWith(Utils.PREF) && !uri.startsWith("/home", Utils.PREF.length())) {
+            uri = Utils.PREF + "/home/.." + uri.substring(Utils.PREF.length());
+        }
+        String curr = ma.getTag(ma.getActionBar().getSelectedNavigationIndex());
+        if (!curr.equals(uri)) {
+            ma.openFile(new File(uri));
+            ma.getFragmentManager().executePendingTransactions();
+        }
+        TextEditor ed = ma.getEditor();
+        Document doc = ed.getText();
+        line = doc.getLineOffset(line);
+        if (line < 0) return;
+        off += line;
+        if (off >= doc.length()) return;
+        ed.setSelection(off);
+        ed.requestFocus();
     }
 }

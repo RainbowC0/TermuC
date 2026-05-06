@@ -15,4 +15,5 @@
 	<item type="id" name="compile"/>
 	<item type="id" name="exstorage"/>
 	<item type="id" name="tmxstorage"/>
+    <item type="id" name="goto_"/>
 </resources>

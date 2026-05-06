@@ -33,6 +33,9 @@ This app uses `com.termux.RUN_COMMAND` to call Termux to run command, and run `c
 - [x] Dark mode
 - [x] Debugging
 - [x] Project management
+- [x] Code action
+- [x] Semantic highlighting
+- [x] Goto definition
 - [ ] Workspace
 
 ## Wiki

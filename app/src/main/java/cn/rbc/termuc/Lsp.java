@@ -19,7 +19,7 @@ public final class Lsp implements Runnable {
 	OPEN = 2, CLOSE = 3,
 	COMPLETION = 4, FIX = 5, CHANGE = 6, SAVE = 7, NOTI = 8, SIGN_HELP = 9,
     FORMAT = 10, HIGHLIGHT = 11, CODEACTION = 12, EXECCMD = 13, SEMTOK = 14,
-    SEMTOKD = 15,
+    SEMTOKD = 15, DEFIN = 16,
 	ERROR = -1;
     static enum SemToken {
         NAMESPACE, TYPE, CLASS, ENUM, INTERFACE, STRUCT, TYPEPARAMETER, PARAMETER, VARIABLE, PROPERTY, ENUMMEMBER, EVENT, FUNCTION, METHOD, MACRO, KEYWORD, MODIFIER, COMMENT, STRING, NUMBER, REGEXP, OPERATOR, UNKNOWN
@@ -264,7 +264,7 @@ public final class Lsp implements Runnable {
 		sb.append("}}");
 		tp = COMPLETION;
 		//Log.d(TAG, sb.toString());
-		mSndr.send("textDocument/completion", sb.toString(), 0);
+		mSndr.send("textDocument/completion", sb.toString(), COMPLETION);
 		return true;
 	}
 
@@ -282,7 +282,7 @@ public final class Lsp implements Runnable {
         sb.append(retrig);
         sb.append("}}");
         tp = SIGN_HELP;
-        mSndr.send("textDocument/signatureHelp", sb.toString(), 0);
+        mSndr.send("textDocument/signatureHelp", sb.toString(), SIGN_HELP);
         return true;
     }
 
@@ -294,6 +294,7 @@ public final class Lsp implements Runnable {
 		sb.append(",\"insertSpaces\":");
 		sb.append(useSpace);
 		sb.append("}}");
+        tp = FORMAT;
 		//Log.d(TAG, sb.toString());
 		mSndr.send("textDocument/formatting", sb.toString(), FORMAT);
 	}
@@ -314,6 +315,7 @@ public final class Lsp implements Runnable {
 		sb.append(",\"insertSpaces\":");
 		sb.append(useSpace);
 		sb.append("}}");
+        tp = FORMAT;
 		mSndr.send("textDocument/rangeFormatting", sb.toString(), FORMAT);
 	}
 
@@ -325,6 +327,7 @@ public final class Lsp implements Runnable {
 		sb.append(",\"character\":");
 		sb.append(c);
 		sb.append("}}");
+        tp = HIGHLIGHT;
 		mSndr.send("textDocument/documentHighlight", sb.toString(), HIGHLIGHT);
 	}
 
@@ -366,6 +369,7 @@ public final class Lsp implements Runnable {
         }
         sb.setCharAt(sb.length()-1, ']');
         sb.append("}}");
+        tp = EXECCMD;
         mSndr.send("textDocument/codeAction", sb.toString(), CODEACTION);
     }
 
@@ -391,7 +395,20 @@ public final class Lsp implements Runnable {
         StringBuilder sb = new StringBuilder("{\"textDocument\":{\"uri\":");
         sb.append(JSONObject.quote(Uri.fromFile(f).toString()));
         sb.append("}}");
+        tp = SEMTOK;
         mSndr.send("textDocument/semanticTokens/full", sb.toString(), SEMTOK);
+    }
+
+    public void definition(File f, int l, int c) {
+        StringBuilder sb = new StringBuilder("{\"textDocument\":{\"uri\":");
+        sb.append(JSONObject.quote(Uri.fromFile(f).toString()));
+        sb.append("},\"position\":{\"line\":");
+        sb.append(l);
+        sb.append(",\"character\":");
+        sb.append(c);
+        sb.append("}}");
+        tp = DEFIN;
+        mSndr.send("textDocument/definition", sb.toString(), DEFIN);
     }
 
 	public void shutdown() {

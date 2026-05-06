@@ -13,5 +13,7 @@
         ad:id="@+id/menu_replace"
         ad:showAsAction="always"
         ad:icon="@drawable/ic_find_replace_24"
-        ad:title="@string/replace"/>
+        ad:title="@string/replace"
+        ad:alphabeticShortcut="h"
+        ad:alphabeticModifiers="CTRL"/>
 </menu>
