@@ -31,6 +31,7 @@ public final class Lsp implements Runnable {
 	private Sender mSndr = new Sender();
 	private char[] compTrigs = {}, sigTrigs = {};
     private SemToken[] semToks = {};
+    private static final byte[] TERM = {};
 	private Handler mRead;
 
 	// In main thread
@@ -44,11 +45,7 @@ public final class Lsp implements Runnable {
 	public void end() {
 		shutdown();
 		exit();
-		try {
-			sk.close();
-		} catch(IOException ioe) {
-            ioe.printStackTrace();
-        }
+        mSndr.offer(TERM);
 	}
 
 	public boolean isEnded() {
@@ -428,16 +425,20 @@ public final class Lsp implements Runnable {
 			offer(wrap(cmd, hm, id).getBytes(StandardCharsets.UTF_8));
 		}
 
-		public void run() {
+		public synchronized void run() {
 			try {
                 OutputStream ow = sk.getOutputStream();
                 for (;;) {
                     byte[] s = take();
+                    if (s == TERM) {
+                        break;
+                    }
 				    ow.write(CONTENTLEN);
                     ow.write((s.length+"\r\n\r\n").getBytes());
 				    ow.write(s);
 				    ow.flush();
                 }
+                sk.close();
 			} catch (Exception ioe) {
 				ioe.printStackTrace();
 			} finally {

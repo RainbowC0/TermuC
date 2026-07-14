@@ -23,19 +23,22 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	public final static int
 	TYPE_C = 1,
 	TYPE_CPP = 2,
-	TYPE_HEADER = 4,
+    TYPE_JAVA = 4,
+    TYPE_JAVASCRIPT = 8,
+    TYPE_JSON = 16,
+	TYPE_HEADER = 32,
 	TYPE_TXT = 0,
 	TYPE_BLOB = 0x80000000,
-	TYPE_MASK = 3;
+	TYPE_MASK = TYPE_HEADER - 1;
     private final static int ACTION_BASE_ID = 0x80000000;
 	final static String FL = "f", TP = "t", CS = "c", TS = "s", MK = "m", VS = "v";
 	private File fl;
 	private TextEditor ed;
-	int type = -1;
+	int type;
 	private String C;
 	private long lastModified;
 	private List<Range> changes = new ArrayList<>();
-    static final Set<String> DEFTYPES = new ArraySet<String>(0);
+    static final Set<String> DEFTYPES = new ArraySet<>(0);
 
 	public EditFragment() {
 	}
@@ -79,17 +82,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
                 doc = Application.getInstance().load(pth);
                 editor.setTextSize(savedInstanceState.getInt(TS));
             }
-            int tp = type & TYPE_MASK;
-            if (tp == TYPE_C) {
-                C = "clang";
-                TextEditor.setLanguage(CLanguage.getInstance());
-            } else if (tp == TYPE_CPP) {
-                C = "clang++";
-                TextEditor.setLanguage(CppLanguage.getInstance());
-            } else {
-                C = null;
-                TextEditor.setLanguage(LanguageNonProg.getInstance());
-            }
+            invalidateType();
             if (doc != null) {
                 doc.setMetrics(editor);
                 doc.resetRowTable();
@@ -99,13 +92,13 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
                 doc = load();
                 if ("s".equals(Application.completion))
                     onOpen();
-            } 
+            }
         } catch (IOException fnf) {
 			fnf.printStackTrace();
 			HelperUtils.show(Toast.makeText(ma, getString(R.string.open_failed) + fnf.getMessage(), Toast.LENGTH_SHORT));
 		}
 		if ((type & TYPE_MASK) != TYPE_TXT) {
-			if ("s".equals(Application.completion))
+			if (hasLsp() && "s".equals(Application.completion))
 				editor.setFormatter(this);
 			editor.setAutoComplete("l".equals(Application.completion));
 		}
@@ -117,9 +110,45 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 		return C;
 	}
 
+    static final boolean isExecutable(int type) {
+        return (type & TYPE_HEADER) == 0;
+    }
+
+    final boolean isText() {
+        return (type & TYPE_MASK) == TYPE_TXT;
+    }
+
+    final boolean hasLsp() {
+        return (type & (TYPE_C|TYPE_CPP)) != 0;
+    }
+
+    private void invalidateType() {
+        int tp = type & TYPE_MASK;
+        if (tp == TYPE_C) {
+            C = "clang";
+            TextEditor.setLanguage(CLanguage.getInstance());
+        } else if (tp == TYPE_CPP) {
+            C = "clang++";
+            TextEditor.setLanguage(CppLanguage.getInstance());
+        } else if (tp == TYPE_JAVA) {
+            C = "javac";
+            TextEditor.setLanguage(LanguageJava.getInstance());
+        } else if (tp == TYPE_JAVASCRIPT) {
+            C = "node";
+            TextEditor.setLanguage(LanguageJavascript.getInstance());
+        } else if (tp == TYPE_JSON) {
+            C = null;
+            TextEditor.setLanguage(LanguageJson.getInstance());
+        } else {
+            C = null;
+            TextEditor.setLanguage(LanguageNonProg.getInstance());
+        }
+    }
+
 	@Override
 	public void updateCaret(int caretIndex) {
-        if (!"s".equals(Application.completion)) return;
+        if (!("s".equals(Application.completion) && hasLsp())) return;
+        // in lsp
 		Document text = ed.getText();
 		if (ed.isSelectText2()
             || !(Character.isUnicodeIdentifierPart(text.charAt(caretIndex))
@@ -135,6 +164,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 
 	@Override
 	public void format(Document txt, int width) {
+        if (!hasLsp()) return;
 		int start = ed.getSelectionStart(), end = ed.getSelectionEnd();
 		Lsp lsp = Application.getInstance().lsp;
         if (start == end)
@@ -233,10 +263,9 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	}
 
     public void onOpen() {
-        int tp = type & TYPE_MASK;
-        if (tp != TYPE_TXT) {
+        if (hasLsp()) {
             Lsp lsp = Application.getInstance().lsp;
-            lsp.didOpen(fl, tp == TYPE_C ? "c" : "cpp", ed.getText().toString());
+            lsp.didOpen(fl, (type & TYPE_C) != 0 ? "c" : "cpp", ed.getText().toString());
             lsp.semanticTokensFull(fl);
         }
     }
@@ -246,7 +275,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 		try {
 			Document cs = load();
             ed.mCtrlr.determineSpans();
-            if ("s".equals(Application.completion)) {
+            if ("s".equals(Application.completion) && hasLsp()) {
 			    Lsp lsp = Application.getInstance().lsp;
                 lsp.didChange(fl, 0, cs.toString());
                 lsp.semanticTokensFull(fl);
@@ -263,17 +292,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 			MainActivity ma = (MainActivity)getActivity();
 			ma.setEditor(ed);
 			ma.setFileRunnable((type & TYPE_HEADER) == 0);
-			int tp = type & TYPE_MASK;
-			if (tp == TYPE_C) {// C
-				TextEditor.setLanguage(CLanguage.getInstance());
-				C = "clang";
-			} else if (tp == TYPE_CPP) {
-				TextEditor.setLanguage(CppLanguage.getInstance());
-				C = "clang++";
-			} else {
-				TextEditor.setLanguage(LanguageNonProg.getInstance());
-				C = null;
-			}
+			invalidateType();
 			refresh();
 		}
 	}
@@ -303,6 +322,9 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         writer.close();
         lastModified = FileHelper.lastModified(fl);
         ed.setEdited(doc.getMarkedVersion() != doc.getCurrentVersion());
+        if ("s".equals(Application.completion) && hasLsp()) {
+            Application.getInstance().lsp.didSave(fl);
+        }
     }
 
 	public Document load() throws IOException {
@@ -320,7 +342,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         doc.resetUndos();
         doc.clearSpans();
         doc.analyzeWordWrap();
-		if ((type & TYPE_MASK) != TYPE_TXT && "s".equals(Application.completion)) {
+		if (hasLsp() && "s".equals(Application.completion)) {
 			doc.setOnTextChangeListener(this);
         }
 		return doc;
@@ -332,18 +354,27 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 
 	public static int fileType(File pwd) {
 		String _it = pwd.getName();
-		int _tp;
-		if (_it.endsWith(".c"))
-			_tp = TYPE_C;
-		else if (FileHelper.isCpp(_it))
-			_tp = TYPE_CPP;
-		else if (_it.endsWith(".h") || _it.endsWith(".hpp"))
-			_tp = TYPE_CPP | TYPE_HEADER;
-		else if (!Utils.isBlob(pwd))
-			_tp = TYPE_TXT | TYPE_HEADER;
-		else
-			_tp = TYPE_BLOB;
-		return _tp;
+        int idx = _it.lastIndexOf(".");
+        String exts = idx >= 0 ? _it.substring(idx+1) : "";
+        switch (exts) {
+            case "c": return TYPE_C;
+            case "cpp":
+            case "cxx":
+            case "cc":
+                return TYPE_CPP;
+            case "h":
+            case "hpp":
+                return TYPE_CPP | TYPE_HEADER;
+            case "java":
+                return TYPE_JAVA | TYPE_HEADER;
+            case "js":
+                return TYPE_JAVASCRIPT | TYPE_HEADER;
+            case "json":
+                return TYPE_JSON | TYPE_HEADER;
+        }
+        if (Utils.isBlob(pwd))
+            return TYPE_BLOB;
+        return TYPE_TXT | TYPE_HEADER;
 	}
 /*
     private void semTokensSend() {
@@ -381,7 +412,6 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
     @Override
     public boolean onPrepareActionMode(ActionMode p1, Menu p2)
     {
-        
         FreeScrollingTextField te = ed;
         
         int start = te.getSelectionStart(), end = te.getSelectionEnd();

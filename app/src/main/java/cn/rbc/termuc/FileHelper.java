@@ -9,6 +9,21 @@ import java.util.*;
 import static android.provider.DocumentsContract.Document.*;
 
 public class FileHelper {
+	private final static Set<String> CODE_EXTENS;
+
+	static {
+		Set<String> exts = new HashSet<>();
+		exts.add("c");
+		exts.add("h");
+		exts.add("hpp");
+		exts.add("cpp");
+		exts.add("cc");
+		exts.add("cxx");
+		exts.add("java");
+		exts.add("js");
+        exts.add("json");
+		CODE_EXTENS = exts;
+	}
 
 	public static boolean isTermuxFile(File f) {
 		return f.getAbsolutePath().startsWith("/data/data/com.termux");
@@ -53,15 +68,12 @@ public class FileHelper {
 		int icon;
 		if (dir)
 			icon = R.drawable.ic_folder_24;
-		else if (n.endsWith(".c")||isCpp(n)
-			||n.endsWith(".h")||n.endsWith(".hpp"))
-			icon = R.drawable.ic_code_24;
-		else icon = R.drawable.ic_file_24;
+		else {
+            int i = n.lastIndexOf(".");
+			String suffix = i >= 0 ? n.substring(i+1) : null;
+			icon = CODE_EXTENS.contains(suffix) ? R.drawable.ic_code_24 : R.drawable.ic_file_24;
+		}
 		return new FileItem(icon, n);
-	}
-
-	public final static boolean isCpp(String name) {
-		return name.endsWith(".cpp") || name.endsWith(".cxx") || name.endsWith(".cc");
 	}
 
 	public final static InputStream openInputStream(File f) throws IOException {

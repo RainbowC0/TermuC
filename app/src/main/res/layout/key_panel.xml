@@ -4,7 +4,8 @@
     android:layout_height="wrap_content"
     android:background="@drawable/key_panel"
     android:id="@id/keys"
-    android:scrollbars="none">
+    android:scrollbars="none"
+    android:overScrollMode="never">
 
     <LinearLayout
         android:orientation="horizontal"

@@ -14,7 +14,8 @@ public class CppLanguage extends Language{
 		"private", "protected", "public", "friend", "this",
 		"break", "case", "catch", "continue", "default", "do", "else", "for",
 		"goto", "if", "return", "switch", "throw", "try", "while",
-		"export", "namespace", "using", "asm", "inline","restrict",
+		"export", "import", "module", "namespace", "using", "asm", "inline","restrict",
+        "co_await", "co_return", "co_yield", "noexcept", "static_assert",
 	/*};
 	private final static String[] types = {*/
 		"bool", "char", "double", "float", "int", "long", "short", "void", "wchar_t",
@@ -90,7 +91,7 @@ public class CppLanguage extends Language{
 		return true;
 	}
 
-    private static Lexer lx = null;
+    private Lexer lx = null;
 	@Override
 	public Lexer newLexer(CharSeqReader reader) {
         if (lx==null) {
@@ -105,6 +106,11 @@ public class CppLanguage extends Language{
                 keys.add(cppNames[i]);
             }
             cx.keywords = keys;
+            Set<String> types = new HashSet<>();
+            for (int i=l,j=keywords.length;i<j;i++) {
+                types.add(keywords[i]);
+            }
+            cx.types = types;
         } else lx.yyreset(reader);
 		return lx;
 	}

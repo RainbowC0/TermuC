@@ -8,25 +8,28 @@
  */
 package cn.rbc.codeeditor.lang;
 
+import cn.rbc.codeeditor.lang.c.CppLexer;
+import cn.rbc.codeeditor.util.*;
+import java.util.*;
+
 /**
  * Singleton class containing the symbols and operators of the Javascript language
  */
-public class LanguageJavascript extends LanguageCFamily {
-	private static LanguageCFamily _theOne = null;
+public class LanguageJavascript extends Language {
+	private static Language _theOne = null;
 	
 	private final static String[] keywords = {
-		"abstract", "boolean", "break", "byte", "case", "catch", "char",
+		"as", "async", "await", "break", "case", "catch",
 		"class", "const", "continue", "debugger", "default", "delete", "do",
-		"double", "else", "enum", "export", "extends", "false", "final",
-		"finally", "float", "for", "function", "goto", "if", "implements",
-		"import", "in", "instanceof", "int", "interface", "long", "native",
-		"new", "null", "package", "private", "protected", "public", "return",
-		"short", "static", "super", "switch", "synchronized", "this", "throw",
-		"throws", "transient", "true", "try", "typeof", "var", "void",
-		"volatile", "while", "with"
+		"else", "enum", "export", "extends", "false",
+		"finally", "for", "from", "function", "get", "if", "implements",
+		"import", "in", "instanceof", "interface", "let",
+		"new", "null", "of", "package", "private", "protected", "public", "return",
+		"set", "static", "super", "switch", "synchronized", "this", "throw",
+	    "true", "try", "typeof", "var", "void", "while", "with", "yield"
 	};
 
-	public static LanguageCFamily getCharacterEncodings(){
+	public static Language getInstance(){
 		if(_theOne == null){
 			_theOne = new LanguageJavascript();
 		}
@@ -34,10 +37,38 @@ public class LanguageJavascript extends LanguageCFamily {
 	}
 	
 	private LanguageJavascript(){
-		super.registerKeywords(keywords);
+		setKeywords(keywords);
 	}
 
-	public boolean isLineAStart(char c){
-		return false;
+	@Override
+    public boolean isProgLang()
+    {
+        return true;
+    }
+
+    private Lexer lx = null;
+    @Override
+    public Lexer newLexer(CharSeqReader reader) {
+        if (lx==null) {
+            CppLexer cx = new CppLexer(reader);
+            lx = cx;
+            int l = keywords.length;
+            Set<String> keys = new HashSet<>();
+            for (int i=0;i<l;i++) {
+                keys.add(keywords[i]);
+            }/*
+            for (int i=0;i<keynames.length;i++) {
+                keys.add(keynames[i]);
+            }*/
+            cx.keywords = keys;
+            Set<String> types = new HashSet<>();
+            for (int i=l,j=keywords.length;i<j;i++) {
+                types.add(keywords[i]);
+            }
+            cx.types = types;
+            cx.trackPreprocessor = false;
+            cx.backquoteString = true;
+        } else lx.yyreset(reader);
+        return lx;
 	}
 }

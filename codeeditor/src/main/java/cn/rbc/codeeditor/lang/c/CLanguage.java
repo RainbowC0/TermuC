@@ -65,12 +65,12 @@ public class CLanguage extends Language{
 		return true;
 	}
 
-    private CLexer lx = null;
+    private CppLexer lx = null;
 
 	@Override
 	public Lexer newLexer(CharSeqReader reader) {
         if (lx == null) {
-		    CLexer cx = new CLexer(reader);
+		    CppLexer cx = new CppLexer(reader);
 		    lx = cx;
 		    int l = keywords.length - 12;
             Set<String> keys = new HashSet<>();
@@ -81,6 +81,11 @@ public class CLanguage extends Language{
                 keys.add(keynames[i]);
             }
             cx.keywords = keys;
+            Set<String> types = new HashSet<>();
+            for (int i=l,j=keywords.length;i<j;i++) {
+                types.add(keywords[i]);
+            }
+            cx.types = types;
         } else lx.yyreset(reader);
         return lx;
 	}

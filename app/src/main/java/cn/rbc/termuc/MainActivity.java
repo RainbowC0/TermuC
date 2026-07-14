@@ -262,8 +262,6 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 			try {
 				if (lastFrag!=null) {
 					lastFrag.save();
-					if ((lastFrag.type & EditFragment.TYPE_MASK) != EditFragment.TYPE_TXT)
-						Application.getInstance().lsp.didSave(lastFrag.getFile());
 				}
 				Project.reload();
 				StringBuilder sb;
@@ -318,8 +316,6 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 				if (lastFrag!=null) {
 					lastFrag.save();
 					f = lastFrag.getFile();
-					if ((lastFrag.type & EditFragment.TYPE_MASK) != EditFragment.TYPE_TXT)
-						Application.getInstance().lsp.didSave(f);
 				} else f = null;
 				Project.reload();
 				File out = new File(Project.rootPath, Project.outputDir);
@@ -418,12 +414,12 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 		} else if ((_i = EditFragment.fileType(f)) >= 0) {
             Application app = Application.getInstance();
             Lsp lsp;
-			if (hda.isEmpty() && "s".equals(Application.completion) && (lsp=app.lsp).isEnded()) {
+            EditFragment ef = new EditFragment(f, _i);
+			if ("s".equals(Application.completion) && ef.hasLsp() && (lsp=app.lsp).isEnded()) {
 				lsp.end();
 				lsp.start(this, app.hand);
 				lsp.initialize(Project.rootPath);
 			}
-			EditFragment ef = new EditFragment(f, _i);
 			FragmentTransaction mts = getFragmentManager().beginTransaction();
 			mts.add(R.id.editFrag, ef, _it);
 			if (lastFrag != null)
@@ -432,7 +428,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 			lastFrag = ef;
 			hda.add(_it);
 			byhand = false;
-			setFileRunnable(((_i & EditFragment.TYPE_HEADER) == 0));
+			setFileRunnable(EditFragment.isExecutable(_i));
 			_i = hda.getCount() - 1;
 		}
 		boolean b = _i>=0;
@@ -468,9 +464,8 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 				lsp.didClose(new File(str));
 			}
 		}
-		lsp.end();
 		boolean s = "s".equals(Application.completion);
-		if (s) {
+		if (s && lsp.isEnded()) {
 			lsp.start(this, Application.getInstance().hand);
 			lsp.initialize(Project.rootPath);
 		}
@@ -519,7 +514,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 					Menu m = pm.getMenu();
 					if (!nproj) {
 						m.add(0, R.id.build, 0, R.string.build).setOnMenuItemClickListener(this);
-						if (lastFrag!=null && (lastFrag.type&EditFragment.TYPE_MASK)!=0)
+						if (lastFrag!=null && !lastFrag.isText())
 							m.add(0, R.id.compile, 0, R.string.compile).setOnMenuItemClickListener(this);
 					}
 					m.add(0, R.id.run, 0, R.string.run).setOnMenuItemClickListener(this);
@@ -537,8 +532,6 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
             case R.id.save:
 				try {
 					lastFrag.save();
-					if ((lastFrag.type & EditFragment.TYPE_MASK) != EditFragment.TYPE_TXT)
-						Application.getInstance().lsp.didSave(lastFrag.getFile());
 					toast(getText(R.string.saved));
 				} catch (IOException e) {
 					e.printStackTrace();
@@ -663,7 +656,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 				byhand = false;
 				getActionBar().setSelectedNavigationItem(j);
 				byhand = true;
-				setFileRunnable((_tp & EditFragment.TYPE_HEADER) == 0);
+				setFileRunnable(EditFragment.isExecutable(_tp));
 			}
 		}
 		if (subc != null)
@@ -779,10 +772,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 						ed.setTabSpaces(Application.tabsize);
                         ed.setSuggestion(Application.suggestion);
                         ed.setAutoCaps(Application.auto_caps);
-                        if (chg) f.onOpen();/*
-						int tp = f.type&EditFragment.TYPE_MASK;
-						if (chg && tp!=EditFragment.TYPE_TXT)
-							lsp.didOpen(f.getFile(), tp==EditFragment.TYPE_C?"c":"cpp", ed.getText().toString());*/
+                        if (chg) f.onOpen();
 					}	
 				} else if (resultCode == RESULT_FIRST_USER) {
 					recreate();
