@@ -31,8 +31,10 @@
  */
 package cn.rbc.codeeditor.view;
 
+import android.annotation.TargetApi;
 import android.content.*;
 import android.graphics.*;
+import android.os.Build;
 import android.text.*;
 import android.text.method.*;
 import android.util.*;
@@ -100,7 +102,6 @@ DialogInterface.OnDismissListener, Runnable {
     /**
      * When in selection mode, the caret height is scaled by this factor
      */
-    protected static float SEL_CARET_HEIGHT_SCALE = 0.5f;
     protected static int DEFAULT_TAB_LENGTH_SPACES = 4;
     protected static int BASE_TEXT_SIZE_PIXELS = 16;
     protected static long SCROLL_PERIOD = 250; //in milliseconds
@@ -260,7 +261,6 @@ DialogInterface.OnDismissListener, Runnable {
         }
     };
     private boolean isUseGboard = false;
-    private RectF mRect;
     private EdgeEffect mTopEdge;
     private EdgeEffect mBottomEdge;
     protected ClipboardPanel mClipboardPanel;
@@ -462,11 +462,12 @@ DialogInterface.OnDismissListener, Runnable {
 		mLineBrush.setTextSize(BASE_TEXT_SIZE_PIXELS);
         mTopEdge = new EdgeEffect(mContext);
         mBottomEdge = new EdgeEffect(mContext);
-        mRect = new RectF();
         setLongClickable(true);
         setFocusableInTouchMode(true);
         setHapticFeedbackEnabled(true);
-        setDefaultFocusHighlightEnabled(false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            setDefaultFocusHighlightEnabled(false);
+        }
         setColorScheme(ColorSchemeLight.getInstance());
 		mSpaceWidth = (int)mTextPaint.measureText(" ");
 		mCursorWidth = (int)(HelperUtils.getDpi(mContext) * 1.5f);
@@ -1022,7 +1023,7 @@ DialogInterface.OnDismissListener, Runnable {
     }
 
     // map spacing
-    private char[] buf = new char[2];
+    private final char[] buf = new char[2];
 
     private char mapSpace(char c) {
         switch (c) {
@@ -2199,15 +2200,14 @@ DialogInterface.OnDismissListener, Runnable {
             mCtrlr.onPrintableChar(c);
     }
 
+    private boolean mTransBool;
+    private CharSequence mTransTx;
     /**
      * @param candidates A string of characters to for the user to choose from
      * @param replace    If true, the character before the caret will be replaced
      *                   with the user-selected char. If false, the user-selected char will
      *                   be inserted at the caret position.
      */
-	private boolean mTransBool;
-	private CharSequence mTransTx;
-
     private void showCharacterPicker(String candidates, boolean replace) {
         mTransBool = replace;
         SpannableStringBuilder dummyString = new SpannableStringBuilder();
@@ -2320,6 +2320,7 @@ DialogInterface.OnDismissListener, Runnable {
         invalidateCaretRow();
     }
 
+    @TargetApi(Build.VERSION_CODES.N)
 	@Override
 	public PointerIcon onResolvePointerIcon(MotionEvent event, int pointerIndex) {
 		return PointerIcon.getSystemIcon(mContext, PointerIcon.TYPE_TEXT);

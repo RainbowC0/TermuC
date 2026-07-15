@@ -104,9 +104,11 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
         }
         super.onCreate(savedInstanceState);
 		hda = new HeaderAdapter(new ContextThemeWrapper(getBaseContext(), android.R.style.Theme_Holo), R.layout.header_item);
-		Resources.Theme rt = getResources().newTheme();
-		rt.applyStyle(android.R.style.Theme_Holo, true);
-		hda.setDropDownViewTheme(rt);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            Resources.Theme rt = getResources().newTheme();
+            rt.applyStyle(android.R.style.Theme_Holo, true);
+            hda.setDropDownViewTheme(rt);
+        }
         hda.setOnCloseListener(this);
 		getActionBar().setListNavigationCallbacks(hda, this);
 		hda.registerDataSetObserver(obs = new DataSetObserver() {
@@ -193,7 +195,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 	public void onGlobalLayout() {
 		try {
 			InputMethodManager inputMethodManager = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
-			Method declaredMethod = inputMethodManager.getClass().getDeclaredMethod("getInputMethodWindowVisibleHeight", new Class[0]);
+			Method declaredMethod = inputMethodManager.getClass().getDeclaredMethod("getInputMethodWindowVisibleHeight");
 			declaredMethod.setAccessible(true);
 			boolean b = ((Integer)declaredMethod.invoke(inputMethodManager, new Object[0])).intValue() > 0;
 			if (keyboardShown != b && (transTxV == null || !transTxV.isAttachedToWindow())) {
@@ -274,7 +276,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 					sb.append(Utils.escape(f.getAbsolutePath()));
 					sb.append("\" ");
 					sb.append(Application.cflags);
-					if (id != 0 && Application.cflags.indexOf("-g") == -1)
+					if (!Application.cflags.contains("-g"))
 						sb.append(" -g");
 					sb.append(" -o $x && ");
 					pth = pwd.getAbsolutePath();
@@ -900,7 +902,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
     }
 
     final void toast(CharSequence charSequence) {
-        HelperUtils.show(Toast.makeText(this, charSequence, 0));
+        HelperUtils.show(Toast.makeText(this, charSequence, Toast.LENGTH_SHORT));
     }
 
     public void showList(View view) {

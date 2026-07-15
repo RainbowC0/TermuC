@@ -85,12 +85,9 @@ public class Document extends TextBuffer implements Parcelable {
             return;
         int startRow = Collections.binarySearch(_rowTable, charOffset);
         if (startRow >= 0) {
-            // if (tmp == charOffset)
             _rowTable.set(startRow, _gapEndIndex);
             startRow++;
         } else startRow = ~startRow;
-        //Log.i("Lsp", "b"+charOffset+_rowTable.toString()+_gapStartIndex+" "+_gapEndIndex);
-
         removeRowMetadata(startRow, _gapEndIndex);
         if (startRow > 1) {
             int k = _rowTable.get(startRow-1);
@@ -100,9 +97,6 @@ public class Document extends TextBuffer implements Parcelable {
                 startRow--;
         }
         analyzeWordWrap(startRow, charOffset, _gapEndIndex);
-        //Log.i("Lsp", "a"+startRow+_rowTable.toString()+_gapStartIndex+" "+_gapEndIndex);
-        //updateWordWrapAfterEdit(startRow, analyzeEnd, -totalChars);
-
     }
 
     @Override
@@ -115,17 +109,7 @@ public class Document extends TextBuffer implements Parcelable {
                 _rowTable.set(startRow, charOffset);
             startRow++;
         } else startRow = ~startRow;
-        // Log.i("Lsp", "f"+_rowTable.toString()+ _gapStartIndex+" "+_gapEndIndex);
-        
-        // Log.i("Lsp", "b"+charOffset+_rowTable.toString()+_gapStartIndex+" "+_gapEndIndex);
-        
-        /*if (startRow < 0) startRow = ~startRow;
-        else startRow++;*/
-        //int analyzeEnd = findNextLineFrom(charOffset + count);
-        //updateWordWrapAfterEdit(startRow, analyzeEnd, count);
         analyzeWordWrap(startRow, charOffset, charOffset + count);
-        //Log.i("Lsp", "a"+startRow+_rowTable.toString()+_gapStartIndex+" "+_gapEndIndex);
-
     }
 
     public void insertBefore(char[] cArray, int insertionPoint, long timestamp) {
@@ -171,7 +155,6 @@ public class Document extends TextBuffer implements Parcelable {
             // insert
             int tmp = logicalToRealIndex(oldStart);
             startRow = Collections.binarySearch(_rowTable, tmp);
-            //Log.i("Lsp", "s"+tmp+","+oldStart+","+_gapEndIndex+","+startRow);
             if (startRow >= 0) {
                 _rowTable.set(startRow, oldStart);
                 startRow++;
@@ -183,8 +166,6 @@ public class Document extends TextBuffer implements Parcelable {
                 _rowTable.set(startRow, _gapEndIndex);
                 startRow++;
             } else startRow = ~startRow;
-            //Log.i("Lsp", "b"+charOffset+_rowTable.toString()+_gapStartIndex+" "+_gapEndIndex);
-
             removeRowMetadata(startRow, _gapEndIndex);
             if (startRow > 1) {
                 int k = _rowTable.get(startRow-1);
@@ -232,49 +213,13 @@ public class Document extends TextBuffer implements Parcelable {
         adjustOffsetOfRows(i, _contents.length, increment);
     }
 
-    //No error checking is done on parameters.
-    private int findNextLineFrom(int charOffset) {
-        int lineEnd = logicalToRealIndex(charOffset);
-
-        while (lineEnd < _contents.length) {
-            // skip the gap
-            if (lineEnd == _gapStartIndex) {
-                lineEnd = _gapEndIndex;
-            }
-
-            if (_contents[lineEnd] == Language.NEWLINE ||
-                    _contents[lineEnd] == Language.EOF) {
-                break;
-            }
-
-            ++lineEnd;
-        }
-
-        return lineEnd + 1;
-    }
-
-    private void updateWordWrapAfterEdit(int startRow, int analyzeEnd, int delta) {
-        if (startRow > 0) {
-            // if the first word becomes shorter or an inserted space breaks it
-            // up, it may fit the previous line, so analyse that line too
-            --startRow;
-        }
-        int analyzeStart = _rowTable.get(startRow);
-
-        //changes only affect the rows after startRow
-        //_rowTable.shift(analyzeEnd - delta, delta);
-        //adjustOffsetOfRowsFrom(startRow + 1, delta);
-        //DLog.i("Lsp", analyzeStart+" "+_rowTable.get(startRow)+" "+startRow);
-        analyzeWordWrap(startRow + 1, analyzeStart, analyzeEnd);
-    }
-
     /**
      * Removes row offset info from fromRow to the row that endOffset is on,
      * inclusive.
      * <p>
      * No error checking is done on parameters.
      */
-    private final void removeRowMetadata(int fromRow, int endOffset) {
+    private void removeRowMetadata(int fromRow, int endOffset) {
         int end = fromRow, size = _rowTable.size();
         while (end < size &&
                 _rowTable.get(end) <= endOffset) {
@@ -283,7 +228,7 @@ public class Document extends TextBuffer implements Parcelable {
         _rowTable.subList(fromRow, end).clear();
     }
 
-    private final void adjustOffsetOfRows(int fromRow, int endOffset, int offset) {
+    private void adjustOffsetOfRows(int fromRow, int endOffset, int offset) {
         int i;
         final int l = _rowTable.size();
         while (fromRow < l && (i = _rowTable.get(fromRow)) < endOffset) {
@@ -294,7 +239,6 @@ public class Document extends TextBuffer implements Parcelable {
     public void analyzeWordWrap() {
 
         resetRowTable();
-        //_rowTable.clear();
 
         if (_isWordWrap && !hasMinimumWidthForWordWrap()) {
             if (_metrics.getRowWidth() > 0) {
@@ -325,7 +269,6 @@ public class Document extends TextBuffer implements Parcelable {
             tempref = new WeakReference<>(temp);
         }
         if (!_isWordWrap) {
-            //  Log.w("Lsp", rowIndex+","+offset+","+end+","+_gapStartIndex+","+_gapEndIndex+","+_contents[offset]);
             while (offset < end) {
                 // skip the gap
                 if (offset == _gapStartIndex) {
@@ -341,7 +284,7 @@ public class Document extends TextBuffer implements Parcelable {
 
             }
             if (!temp.isEmpty())
-                removeRowMetadata(rowIndex, temp.get(temp.size()-1));
+                removeRowMetadata(rowIndex, temp.get(temp.size() - 1));
             _rowTable.addAll(rowIndex, temp);
             temp.clear();
             return;
@@ -350,31 +293,28 @@ public class Document extends TextBuffer implements Parcelable {
             TextWarriorException.fail("Not enough space to do word wrap");
             return;
         }
-        //int potentialBreakPoint = offset;
         offset = rowIndex > 0 ? _rowTable.get(rowIndex - 1) : logicalToRealIndex(0);
-        int soff = offset;
-        //int potentialBreakPoint = offset;
-        int j = end + 1;
-        for (int i = rowIndex, l = _rowTable.size();
-             i < l && _contents[((j = _rowTable.get(i)) == _gapEndIndex ? j = _gapStartIndex : j) - 1] != Language.NEWLINE;
-             i++)
-            ;
-        if (j > end)
-            end = j - 1;
-        //Log.i("Lsp", offset + "," + end);
-        //int wordExtent = 0;
+        {
+            int j = end + 1, i = rowIndex, l = _rowTable.size();
+            for (; i < l && _contents[((j = _rowTable.get(i)) == _gapEndIndex ? j = _gapStartIndex : j) - 1] != Language.NEWLINE;
+                 i++);
+            if (i == l)
+                j = _contents.length;
+            if (j > end)
+                end = j - 1;
+        }
         final int maxWidth = _metrics.getRowWidth();
-        //Log.i("Lsp", maxWidth + ":" + _metrics.getAdvance('c'));
-        //int remainingWidth = maxWidth;
         int lineStart = offset;
         int lastBreakPos = -1;
         int currWidth = 0;
+        int breakCumWidth = 0;
 
-        for (; offset < end; offset++) {
+        for (;; offset++) {
             // skip the gap
             if (offset == _gapStartIndex) {
                 offset = _gapEndIndex;
             }
+            if (offset >= end) break;
             char c = _contents[offset];
             if (c == Language.NEWLINE) {
                 //start a new row
@@ -382,10 +322,9 @@ public class Document extends TextBuffer implements Parcelable {
                 if (lineStart == _gapStartIndex)
                     lineStart = _gapEndIndex;
                 temp.add(lineStart);
-                soff = lineStart;
-                //remainingWidth = maxWidth;
                 currWidth = 0;
                 lastBreakPos = -1;
+                breakCumWidth = 0;
                 continue;
             }
 
@@ -395,89 +334,33 @@ public class Document extends TextBuffer implements Parcelable {
                     if (lineStart == _gapStartIndex)
                         lineStart = _gapEndIndex;
                     temp.add(lineStart);
-                    soff = lineStart;
-                    // TODO 不用回溯方法
-                    offset = lineStart;
+                    currWidth -= breakCumWidth;
                 } else {
-                    if (soff == lineStart) {
-                        temp.add(offset);
-                    } else if (temp.isEmpty() || temp.get(temp.size() - 1) < lineStart) {
-                        temp.add(lineStart);
-                    }
-                    soff = offset;
+                    temp.add(offset);
                     lineStart = offset;
+                    currWidth = _metrics.getAdvance(c);
                 }
-                currWidth = _metrics.getAdvance(c);
                 lastBreakPos = -1;
                 continue;
             }
             if (" ,;.\t\uFFFF".indexOf(c) >= 0) {
                 lastBreakPos = offset;
+                breakCumWidth = currWidth;
             }
-			/*wordExtent += _metrics.getAdvance(c);
-			final boolean isWhitespace = ".,; \t\n\uFFFF".indexOf(c)>=0;
-
-			if (isWhitespace) {
-				//full word obtained
-				if (wordExtent <= remainingWidth) {
-					remainingWidth -= wordExtent;
-				} else if (wordExtent > maxWidth) {
-					//handle a word too long to fit on one row
-					int current = potentialBreakPoint;
-					remainingWidth = maxWidth;
-
-					//start the word on a new row, if it isn't already
-					if (current != offset && (temp.isEmpty() ||
-						current != temp.get(temp.size() - 1))) {
-						temp.add(current);
-                        Log.i("Lsp", "cu"+current);
-					}
-
-					while (current <= offset) {
-						// skip the gap
-						if (current == _gapStartIndex) {
-							current = _gapEndIndex;
-						}
-
-						int advance = _metrics.getAdvance(_contents[current]);
-						if (advance > remainingWidth) {
-							temp.add(current);
-							remainingWidth = maxWidth - advance;
-						} else {
-							remainingWidth -= advance;
-						}
-
-						++current;
-					}
-				} else {
-					//invariant: potentialBreakPoint != startOffset
-					//put the word on a new row
-					temp.add(potentialBreakPoint);
-                    Log.i("Lsp", "pB"+potentialBreakPoint);
-					remainingWidth = maxWidth - wordExtent;
-				}
-
-				wordExtent = 0;
-				potentialBreakPoint = offset + 1;
-                if (potentialBreakPoint == _gapStartIndex)
-                    potentialBreakPoint = _gapEndIndex;
-			}*/
         }
+        removeRowMetadata(rowIndex, end);
         if (!temp.isEmpty()) {
-            //Log.i("Lsp", temp.toString());
-            removeRowMetadata(rowIndex, temp.get(temp.size()-1));
             //merge with existing row table
             _rowTable.addAll(rowIndex, temp);
-            //Log.i("Lsp", _rowTable.toString());
             temp.clear();
-        } else removeRowMetadata(rowIndex, end);
+        }
     }
 
     public CharSequence getRow(int rowNumber) {
 
         int rowSize = getRowSize(rowNumber);
         if (rowSize == 0) {
-            return new String();
+            return "";
         }
 
         int startIndex = realToLogicalIndex(_rowTable.get(rowNumber));
@@ -545,14 +428,14 @@ public class Document extends TextBuffer implements Parcelable {
         return rowNumber < 0 || rowNumber >= _rowTable.size();
     }
 
-    public static interface TextFieldMetrics {
+    public interface TextFieldMetrics {
         /**
          * Returns printed width of c.
          *
          * @param c Character to measure
          * @return Advance of character, in pixels
          */
-        public int getAdvance(char c);
+        int getAdvance(char c);
 
         /**
          * Returns the maximum width available for a row of text to be layout. This
@@ -560,7 +443,7 @@ public class Document extends TextBuffer implements Parcelable {
          *
          * @return Maximum width of a row, in pixels
          */
-        public int getRowWidth();
+        int getRowWidth();
     }
 
     @Override

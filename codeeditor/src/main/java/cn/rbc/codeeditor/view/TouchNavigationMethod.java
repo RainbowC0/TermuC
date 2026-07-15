@@ -31,7 +31,7 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
     protected final FreeScrollingTextField mTextField;
     protected boolean isCaretTouched = false, mIsFastScrolling = false;
     private volatile boolean longPressed;
-    private GestureDetector mGestureDetector;
+    private final GestureDetector mGestureDetector;
     private float lastDist, lastSize;
     private float lastX, lastY;
     private int fling, mThumbHeight;
@@ -64,7 +64,7 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
                 int h = field.getHeight();
                 float scrollStart = ((float)field.getScrollY()) / (h + field.getMaxScrollY()) * h;
                 int thumbHeight = Math.max(h / 8, mThumbHeight);
-                if (Math.abs(e.getY() - scrollStart - thumbHeight / 2) < thumbHeight) {
+                if (Math.abs(e.getY() - scrollStart - thumbHeight / 2.f) < thumbHeight) {
                     mIsFastScrolling = true;
                     return true;
                 }
@@ -102,18 +102,18 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
     public boolean onSingleTapUp(MotionEvent e) {
         int x = screenToViewX((int) e.getX());
         int y = screenToViewY((int) e.getY());
-		FreeScrollingTextField tf = mTextField;
+        FreeScrollingTextField tf = mTextField;
         int charOffset = tf.coordToCharIndex(x, y);
 
-		if (x < tf.mLeftOffset) {
+        if (x < tf.mLeftOffset) {
             Document doc = tf.hDoc;
-			y = doc.findLineNumber(charOffset);
-			if (y == -1)
-				y = doc.getLineCount() - 1;
-		    doc.markLine(1 + y);
-			tf.postInvalidateOnAnimation();
-			return true;
-		}
+            y = doc.findLineNumber(charOffset);
+            if (y == -1)
+                y = doc.getLineCount() - 1;
+            doc.markLine(1 + y);
+            tf.postInvalidateOnAnimation();
+            return true;
+        }
         boolean b = tf.isSelectText();
         if (b) {
             tf.selectText(false);
@@ -255,14 +255,13 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
     public boolean onTouchEvent(MotionEvent event) {
         onTouchZoom(event);
         boolean handled = mGestureDetector.onTouchEvent(event) || longPressed;
-        if (!handled
-			&& (event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
+        if (!handled && (event.getAction() & MotionEvent.ACTION_MASK) == MotionEvent.ACTION_UP) {
             // propagate up events since GestureDetector does not do so
             ClipboardPanel panel = mTextField.mClipboardPanel;
             if (isCaretTouched)
                 panel.invalidate();
             else
-            panel.invalidateContentRect();
+                panel.invalidateContentRect();
             handled = onUp(event);
         }
         return handled;
@@ -395,7 +394,7 @@ public class TouchNavigationMethod extends GestureDetector.SimpleOnGestureListen
         return true;
     }
 
-    final private boolean isDragSelect() {
+    private boolean isDragSelect() {
         return true;
     }
 

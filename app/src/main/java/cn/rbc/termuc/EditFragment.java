@@ -31,14 +31,14 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	TYPE_BLOB = 0x80000000,
 	TYPE_MASK = TYPE_HEADER - 1;
     private final static int ACTION_BASE_ID = 0x80000000;
-	final static String FL = "f", TP = "t", CS = "c", TS = "s", MK = "m", VS = "v";
+	final static String FL = "f", TP = "t", TS = "s", VS = "v";
 	private File fl;
 	private TextEditor ed;
 	int type;
 	private String C;
 	private long lastModified;
 	private List<Range> changes = new ArrayList<>();
-    static final Set<String> DEFTYPES = new ArraySet<>(0);
+    static final Set<String> DEFTYPES = new HashSet<>(0);
 
 	public EditFragment() {
 	}
@@ -246,14 +246,15 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 		long mLast = FileHelper.lastModified(fl);
 		if (mLast != lastModified) {
 			lastModified = mLast;
-			Builder bd = new Builder(getContext());
+			Builder bd = new Builder(getActivity());
 			bd.setTitle(fl.getName());
 			bd.setMessage(getString(R.string.file_modified, fl.getName()));
 			bd.setPositiveButton(android.R.string.ok, this);
 			bd.setNegativeButton(android.R.string.cancel, null);
 			bd.create().show();
 		} else if ("s".equals(Application.completion)) {// TODO: delay for throttle
-            Set<String> typs = Application.getInstance().hand.cacheData.getOrDefault(fl.toString(), DEFTYPES);
+            Set<String> typs = Application.getInstance().hand.cacheData.get(fl.toString());
+            if (typs == null) typs = DEFTYPES;
             Language lang = Tokenizer.getLanguage();
             if (typs != lang.getTypes()) {
                 lang.setTypes(typs);
@@ -334,7 +335,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         Document doc = ed.getText();
         StringBuilder sb = new StringBuilder();
         doc.delete(0, doc.length() - 1, 0L, false);
-		while ((i = fr.read(buf)) != -1) {
+        while ((i = fr.read(buf)) != -1) {
             sb.append(buf, 0, i);
         }
 		fr.close();
@@ -390,7 +391,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
     public boolean onCreateActionMode(ActionMode mode, Menu menu)
     {
         if (menu.size() == 0) {
-            TypedArray tv = getContext().getTheme().obtainStyledAttributes(
+            TypedArray tv = getActivity().getTheme().obtainStyledAttributes(
                 new int[]{
                     android.R.attr.actionModeFindDrawable
                 });
