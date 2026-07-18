@@ -63,7 +63,7 @@ public class GapIntSet {
 		size++;
 	}
 
-	private void remove(int i) {
+	public void remove(int i) {
 		int numMoved = size - i - 1;
 		if (numMoved > 0)
 			System.arraycopy(mData, i+1, mData, i, numMoved);
@@ -117,31 +117,32 @@ public class GapIntSet {
 		return r>=gapSt?r+gapSz:r;
 	}
 
-	public void shift(int l, int off) {
-		int t;
-		if (off==0||size==0||(t=Math.min(l,l+off))>get(size-1))
-			return;
-		if (gapSt<=t&&(gapSz>=0&&l<=gapSt+gapSz)) {
+	public void shift(int pivot, int off) {
+		if (off==0||size==0||pivot>get(size-1)) {
+            return;
+        }
+		if (gapSt<=Math.min(pivot,pivot+off)&&(gapSz>=0&&pivot<=gapSt+gapSz)) {
 			gapSz += off;
-		} else {
-			refresh();
-			int idx = Arrays.binarySearch(mData, 0, size, l-1);
-			if (idx<0)
-				idx = (~idx)-1;
-			if (off>0) {
-				gapSt = idx<0?0:mData[idx]+1;
-				gapSz = ++idx==size?off:gapSt-mData[idx];
-			} else {
-				gapSt = (++idx==size?l:mData[idx])-1;
-				l = Arrays.binarySearch(mData, 0, idx, l+off);
-				if (l<0) l=~l;
-				gapSz = (l==0?0:mData[l-1]) - gapSt;
-			}
-			refresh();
-			gapSz = off-gapSz;
-			if (off<0)
-				gapSt = idx<=0?0:mData[idx-1]+1;
+            return;
 		}
+        refresh();
+        int idx = Arrays.binarySearch(mData, 0, size, pivot-1);
+        if (idx<0)
+            idx = (~idx)-1;
+        if (off>0) {
+            gapSt = idx<0?0:mData[idx]+1;
+            gapSz = ++idx==size?off:gapSt-mData[idx];
+        } else {
+            gapSt = (++idx==size?pivot:mData[idx]);
+            idx = Arrays.binarySearch(mData, 0, idx, gapSt+off);
+            if (idx<0) idx=~idx;
+            gapSz = (idx==0?0:mData[idx-1]+1) - gapSt;
+        }
+        refresh();
+        gapSz = off-gapSz;
+        if (off<0) {
+            gapSt = idx <= 0 ? 0 : mData[idx-1]+1;
+        }
 	}
 
 	public int find(int l) {

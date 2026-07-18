@@ -1,5 +1,6 @@
 package cn.rbc.codeeditor.view;
 
+import android.annotation.TargetApi;
 import android.content.*;
 import android.content.res.*;
 import android.graphics.*;
@@ -165,6 +166,7 @@ public class ClipboardPanel implements ActionMode.Callback {
             mode.invalidate();
 	}
 
+    @TargetApi(Build.VERSION_CODES.M)
     private void initData() {
         if (_clipboardActionModeCallback2 == null)
         _clipboardActionModeCallback2 = new ActionMode.Callback2() {

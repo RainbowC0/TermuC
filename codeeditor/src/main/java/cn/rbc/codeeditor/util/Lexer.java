@@ -3,7 +3,7 @@ import java.io.*;
 
 public interface Lexer
 {
-	public final static int EOF = 0,
+	int EOF = 0,
 	OPERATOR=1, //运算符
 	IDENTIFIER=2,//标识符
 	INTEGER_LITERAL=3, //整数
@@ -28,8 +28,8 @@ public interface Lexer
 	NEW_LINE=22,
 	ERROR=23;
 
-	public int yylex() throws IOException;
-	public int yylength();
-	public String yytext();
-    public void yyreset(Reader rd);
+	int yylex() throws IOException;
+	int yylength();
+	String yytext();
+	void yyreset(Reader rd);
 }

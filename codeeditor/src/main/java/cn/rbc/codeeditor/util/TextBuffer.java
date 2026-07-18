@@ -100,7 +100,7 @@ public class TextBuffer implements CharSequence
 		int startIndex = getLineOffset(lineNumber);
 
 		if (startIndex < 0)
-			return new String();
+			return "";
 		int lineSize = getLineSize(lineNumber);
 
 		return subSequence(startIndex, startIndex + lineSize).toString();
@@ -363,13 +363,8 @@ public class TextBuffer implements CharSequence
 	 *
 	 * Only UndoStack should use this method. No error checking is done.
 	 */
-	char[] gapSubSequence(int charCount){
-		char[] chars = new char[charCount];
-
-		for (int i = 0; i < charCount; ++i)
-			chars[i] = _contents[_gapStartIndex + i];
-
-		return chars;
+	final String gapSubSequence(int charCount){
+		return new String(_contents, _gapStartIndex, charCount);
 	}
 
 	public void markLine(int l) {
@@ -472,9 +467,9 @@ public class TextBuffer implements CharSequence
 			if (_contents[--_gapStartIndex] == Language.NEWLINE)
 				lines--;
 		}
+		if (lines != 0)
+			_marks.shift(newGapStart==length()?_lineCount:findLineNumber(newGapStart)+1, lines);
 		_lineCount += lines;
-        if (lines != 0)
-            _marks.shift(findLineNumber(newGapStart)+1, lines);
 		_cache.invalidateCache(charOffset);
 	}
 
@@ -513,18 +508,10 @@ public class TextBuffer implements CharSequence
 	 * Adjusts gap so that _gapStartIndex is at newGapStart
 	 */
 	protected void shiftGapLeft(int newGapStart){
-        int i=0, r=_spans.size()-1, l;
-        while (i<r) {
-            l = (i+r) >> 1;
-            if (_spans.get(l).first >= newGapStart) {
-                r = l;
-            } else {
-                i = l+1;
-            }
-        }
+        int i = HelperUtils.lowerBound(_spans, newGapStart);
         Pair p;
-        l = _gapEndIndex - _gapStartIndex;
-        for (r=_spans.size();i<r && (p=_spans.get(i)).first < _gapStartIndex;i++) {
+        int l = _gapEndIndex - _gapStartIndex;
+        for (int r=_spans.size();i<r && (p=_spans.get(i)).first < _gapStartIndex;i++) {
             p.first += l;
         }
         System.arraycopy(_contents, newGapStart, _contents, newGapStart+l, _gapStartIndex - newGapStart);
@@ -536,18 +523,12 @@ public class TextBuffer implements CharSequence
 	 * Adjusts gap so that _gapEndIndex is at newGapEnd
 	 */
 	protected void shiftGapRight(int newGapEnd){
-        int i=0, r=_spans.size()-1, m;
-        while (i<r) {
-            m = (i+r+1) >> 1;
-            if (_spans.get(m).first < newGapEnd) {
-                i = m;
-            } else {
-                r = m - 1;
-            }
-        }
+        int r = HelperUtils.lowerBound(_spans, newGapEnd);
+        if (_spans.get(r).first >= newGapEnd)
+            r--;
         newGapEnd -= _gapEndIndex;
         Pair p;
-        for (i = _gapEndIndex - _gapStartIndex;r>=0 && (p=_spans.get(r)).first >= _gapEndIndex;r--) {
+        for (int i = _gapEndIndex - _gapStartIndex;r>=0 && (p=_spans.get(r)).first >= _gapEndIndex;r--) {
             p.first -= i;
         }
         System.arraycopy(_contents, _gapEndIndex, _contents, _gapStartIndex, newGapEnd);

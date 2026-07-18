@@ -273,7 +273,7 @@ DialogInterface.OnDismissListener, Runnable {
     private Typeface boldTypeface = Typeface.DEFAULT_BOLD;
     protected int mTypeInput = InputType.TYPE_CLASS_TEXT;
     private Context mContext;
-	private SparseIntArray chrAdvs = new SparseIntArray();
+	private final SparseIntArray chrAdvs = new SparseIntArray();
 
     public FreeScrollingTextField(Context context) {
         super(context);
@@ -757,16 +757,16 @@ DialogInterface.OnDismissListener, Runnable {
     }
 
     private void realDraw(Canvas canvas) {
-        int currRowNum = getBeginPaintRow(canvas);
+        Rect bounds = canvas.getClipBounds();
+        int currRowNum = bounds.top / rowHeight();
         int currIndex = hDoc.getRowOffset(currRowNum);
 
         if (currIndex < 0) {
             return;
         }
         int currLineNum = 1 + (isWordWrap() ? hDoc.findLineNumber(currIndex) : currRowNum);
-        int lastLineNum = 0;
-        mLeftOffset = isShowLineNumbers ? (int) mTextPaint.measureText("  " + hDoc.getLineCount()) : 0;
-        int paintX = 0;
+        mLeftOffset = isShowLineNumbers ? (int) mTextPaint.measureText("a" + hDoc.getLineCount()) + mSpaceWidth/2 : 0;
+        int paintX;
         int paintY = getPaintBaseline(currRowNum);
         //----------------------------------------------
         // set up span coloring settings
@@ -775,41 +775,12 @@ DialogInterface.OnDismissListener, Runnable {
         List<Pair> spans = hDoc.getSpans();
         if (spans.isEmpty()) return;
 
-		int spanSize = spans.size();
-		int spanIndex=0, r=spanSize-1, m;
-        /*int k = 0;
-        float j = estp;
-        if (hDoc.charAt(0)==' ') {*
-            spanIndex = 0; r = spanSize-1;*/
-		while (spanIndex < r) {
-			m = (spanIndex + r + 1) >> 1;
-			if (hDoc.realToLogicalIndex(spans.get(m).first) <= currIndex)
-				spanIndex = m;
-			else
-				r = m - 1;
-		}/*
-        } else {
-            spanIndex = hDoc.charAt(0)=='&'?sidx:Math.max(0, Math.min(spanSize-1, sidx + (int)((currIndex-lidx)/estp)));
-            //if (spanIndex<spanSize && spanIndex>=0)
-            m = spanIndex;
-        while ((r=spanIndex+1)<spanSize && spans.get(r).first <= currIndex) {
-            spanIndex = r;k++;
-        }
-        while (spanIndex>0 && spans.get(spanIndex).first > currIndex) {
-            spanIndex--;k++;
-        }
-        lidx = spans.get(spanIndex).first;
-        if (spanIndex!=m&&m>=0)
-            estp = (lidx-spans.get(m).first)/(float)(spanIndex-m);
-        }*
-        mTextPaint.setColor(0xff000000);
-        canvas.drawText(paintY+"", getScrollX(), getScrollY()+rowHeight(), mTextPaint);
-       // sidx = spanIndex;
-        //soff = spans.get(spanIndex).first;*/
+        int r = hDoc.logicalToRealIndex(currIndex);
+        int spanIndex = HelperUtils.lowerBound(spans, r);
+        if (spans.get(spanIndex).first > r)
+            spanIndex--;
 		Pair currSpan = spans.get(spanIndex++);
-		Pair nextSpan = spanIndex < spanSize ? spans.get(spanIndex++) : null;
-
-        //mTextPaint.setTypeface(currSpan.second == Tokenizer.KEYWORD ? boldTypeface : defTypeface);
+		Pair nextSpan = spanIndex < spans.size() ? spans.get(spanIndex++) : null;
 
         int spanColor = mColorScheme.getTokenColor(currSpan.second);
         mTextPaint.setColor(spanColor);
@@ -817,24 +788,24 @@ DialogInterface.OnDismissListener, Runnable {
         //----------------------------------------------
         // start painting!
         //----------------------------------------------
-		boolean showLN = isShowLineNumbers && mLeftOffset >= getScrollX();
-		int width = canvas.getClipBounds().right;
+		final boolean showLN = isShowLineNumbers && mLeftOffset >= getScrollX();
+		int width = bounds.right;
 		int mL = hDoc.length();
 		int rowheight = rowHeight();
 
-		int idx, diagLen;
+		int idx;
 		List<ErrSpan> diagList = hDoc.getDiag();
+        if (diagList == null)
+            diagList = Collections.emptyList();
 		ErrSpan diag;
-		if (diagList == null || diagList.isEmpty()) {
+		if (diagList.isEmpty()) {
 			diag = null;
-			diagLen = 0;
 			idx = 1;
 		} else {
-			diagLen = diagList.size();
 			r = 0;
-			idx = diagLen - 1;
+			idx = diagList.size() - 1;
 			while (r < idx) {
-				m = (idx + r) >> 1;
+				int m = (idx + r) >> 1;
 				if (diagList.get(m).stl >= currLineNum)
 					idx = m;
 				else
@@ -843,17 +814,13 @@ DialogInterface.OnDismissListener, Runnable {
 			diag = diagList.get(idx++);
 		}
 		List<Edit> hls = hDoc.getHighlights();
-		int hidx, hlen;
-		Edit hl;
+		int hidx = 0;
 		if (hls == null || hls.isEmpty()) {
-			hl = null;
-			hidx = 0;
-			hlen = 0;
+            hls = Collections.emptyList();
 		} else {
-			hlen = hls.size();
-			hidx = 0;
+			int hlen = hls.size();
 			do {
-				hl = hls.get(hidx);
+				Edit hl = hls.get(hidx);
 				if (hl.start+hl.len > currIndex) {
 					break;
 				}
@@ -868,31 +835,36 @@ DialogInterface.OnDismissListener, Runnable {
 		int rowEnd = 0;
         int endRowNum = Math.min(hDoc.getRowCount(), 1+getEndPaintRow(canvas));
 		boolean markedCaret = false;
-        for (m = -1; currRowNum < endRowNum && currIndex < mL; currRowNum++) {
-			if (currLineNum != lastLineNum) {
+        for (int m = -1; currRowNum < endRowNum && currIndex < mL; currRowNum++) {
+			if (rowEnd == 0) { // new line
 				if (showLN) {
                     ColorScheme.Colorable ca;
+                    Paint lineBrush = mLineBrush;
                     if (mI < hDoc.getMarksCount() && hDoc.getMark(mI) == currLineNum && isFocused()) {
-                        mLineBrush.setColor(0xffa00000);
-                        canvas.drawRect(0, rowheight * currRowNum, mLeftOffset - (mSpaceWidth >> 1), rowheight * (currRowNum + 1), mLineBrush);
+                        lineBrush.setColor(0xffa00000);
+                        float bottom = paintY + mTextPaint.getFontMetrics().descent;
+                        canvas.drawRect(0, bottom - rowheight, mLeftOffset - (mSpaceWidth >> 1), bottom, lineBrush);
                         ca = ColorScheme.Colorable.SELECTION_FOREGROUND;
                         mI++;
                     } /*else if (hDoc.isInMarkGap(currLineNum))
                         ca = ColorScheme.Colorable.STRING;*/
                     else
                         ca = ColorScheme.Colorable.NON_PRINTING_GLYPH;
-                    mLineBrush.setColor(mColorScheme.getColor(ca));
+                    lineBrush.setColor(mColorScheme.getColor(ca));
                     String num = String.valueOf(currLineNum);
-                    int padx = (int) (mLeftOffset - mTextPaint.measureText(num) - mSpaceWidth);
-                    lastLineNum = currLineNum;
+                    int padx = mLeftOffset - mSpaceWidth;
+                    for (int i=0;i<num.length();i++) {
+                        padx -= getCharAdvance(num.charAt(i));
+                    }
                     canvas.drawText(num, padx, paintY, mLineBrush);
                 }
 				if (currLineNum == mHt && isHighlightRow && !mCtrlr.isSelectText()) {
+                    Paint textPaint = mTextPaint;
 					int eRow = currRowNum + 1, rows = hDoc.getRowCount();
 					while (eRow <= endRowNum && (eRow != rows && hDoc.charAt(hDoc.getRowOffset(eRow) - 1) != Language.NEWLINE))
 						eRow++;
-					int orc = mTextPaint.getColor();
-					mTextPaint.setColor(mColorScheme.getColor(ColorScheme.Colorable.LINE_HIGHLIGHT));
+					int orc = textPaint.getColor();
+					textPaint.setColor(mColorScheme.getColor(ColorScheme.Colorable.LINE_HIGHLIGHT));
 					canvas.drawRect(mLeftOffset,
 									rowheight * currRowNum,
 									width,
@@ -903,11 +875,11 @@ DialogInterface.OnDismissListener, Runnable {
             }
             paintX = mLeftOffset;
 
-			int i = rowEnd;
+			int col = rowEnd;
             r = paintX;
             byte currState = -1; // invalid initial state
-            int drawStart = currIndex, tp = currSpan.second;
-            for (rowEnd += hDoc.getRowSize(currRowNum); i <= rowEnd && currIndex<mL; i++,currIndex++) {
+            int drawStart = currIndex, tp;
+            for (rowEnd += hDoc.getRowSize(currRowNum); col <= rowEnd && currIndex<mL; col++,currIndex++) {
                 // calculate new state
                 byte newState = 0;
                 if (mCtrlr.inSelectionRange(currIndex))
@@ -917,42 +889,44 @@ DialogInterface.OnDismissListener, Runnable {
                 tp = currSpan.second;
                 if (reachSpanEnd) {
                     currSpan = nextSpan;
-                    nextSpan = spanIndex<spanSize ? spans.get(spanIndex++) : null;
+                    nextSpan = spanIndex<spans.size() ? spans.get(spanIndex++) : null;
                 }
                 char c = hDoc.charAt(currIndex);
                 if (Character.isWhitespace(c))
                     newState |= 2;
                 // err line status
+                int diagLen = diagList.size();
                 if (idx <= diagLen) {
                     if (m < 0
                     // start position
-                        && (diag.stl == currLineNum && diag.stc == i
+                        && (diag.stl == currLineNum && diag.stc == col
                     // following position
                         || diag.stl < currLineNum && diag.enl >= currLineNum && r == mLeftOffset)) {
                         m = r;
                     }
                     boolean end;
-                    if (m >= 0 && m < width && ((end = diag.enl == currLineNum && diag.enc == i) || i == rowEnd)) {
+                    if (m >= 0 && m < width && ((end = diag.enl == currLineNum && diag.enc == col) || col == rowEnd)) {
                         newState |= 8;
                         mLineBrush.setColor(ColorScheme.DIAG[diag.severity]);
                         if (idx < diagLen && end)
                             diag = diagList.get(idx++);
                     }
                 }
-				if (hidx < hlen) {
-					if (hl.start+hl.len == currIndex) {
-						int org = mTextPaint.getColor();
-						mTextPaint.setColor(mColorScheme.getColor(ColorScheme.Colorable.HIGHLIGHT));
-						drawTextBackground(canvas, paintX, paintY, r);
-						mTextPaint.setColor(org);
-						hidx++;
-						hl = hidx < hlen ? hls.get(hidx) : null;
-					}
-				}
+                if (hidx < hls.size()) {
+                    Edit hl = hls.get(hidx);
+                    if (hl.start+hl.len == currIndex) {
+                        Paint textPaint = mTextPaint;
+                        int org = textPaint.getColor();
+                        textPaint.setColor(mColorScheme.getColor(ColorScheme.Colorable.HIGHLIGHT));
+                        drawTextBackground(canvas, paintX, paintY, r);
+                        textPaint.setColor(org);
+                        hidx++;
+                    }
+                }
                 //DLog.i("Lsp", i+","+c+","+rowEnd);
                 if (newState != currState
                         || reachSpanEnd && (newState&4)==0
-                        || i==rowEnd
+                        || col==rowEnd
                         || currIndex+1 == mL) {
                     // draw the last text
                     if (drawStart < currIndex) {
@@ -964,20 +938,20 @@ DialogInterface.OnDismissListener, Runnable {
                     // draw err line
                     if ((newState&8)!=0) {
                         canvas.drawLine(m, paintY, Math.min(r, width), paintY, mLineBrush);
-                        m = i == rowEnd ? mLeftOffset : -1;
+                        m = col == rowEnd ? mLeftOffset : -1;
                         newState &= 7;
                     }
                     drawStart = currIndex;
                     currState = newState;
                 }
                // if (i==rowEnd) break;
-                if (currIndex == mCaretPosition && i<rowEnd && isCursorVisible && isFocused()) {
+                if (currIndex == mCaretPosition && col<rowEnd && isCursorVisible && isFocused()) {
                 //draw cursor
                     markCaret(r, paintY);
                     markedCaret = true;
                 //else if (currIndex + 1 == mCaretPosition)
                 //    mCaretSpan = currSpan;
-				}
+                }
                 /*if (i<rowEnd&& currIndex == hDoc._gapStartIndex) {
                     mTextPaint.setColor(0xffff0000);
                     canvas.drawLine(r, paintY, r, paintY-rowheight, mTextPaint);
@@ -986,16 +960,16 @@ DialogInterface.OnDismissListener, Runnable {
                 r += getAdvance(c, r);
             }
             if (currIndex > 1 && hDoc.charAt(currIndex-2) == Language.NEWLINE) {
-				while (idx < diagLen && diag.enl == currLineNum)
-					diag = diagList.get(idx++);
-				++currLineNum;
-				rowEnd = 0;
-				m = -1;
+                for (int len = diagList.size(); idx < len && diag.enl == currLineNum; idx++)
+                    diag = diagList.get(idx);
+                ++currLineNum;
+                rowEnd = 0;
+                m = -1;
                 //byte b = 2;
                 //if (mCtrlr.inSelectionRange(currIndex))
                 //    b |= 4;
                 //drawTextBlock(canvas, currIndex, 1+currIndex, 0, r-getEOLAdvance(), paintY, r, b);
-			}
+            }
             /*if (c!=Language.EOF) {
                 mTextPaint.setColor(mColorScheme.getColor(Colorable.NON_PRINTING_GLYPH));
                 canvas.drawText("" + hDoc.getRowOffset(currRowNum + 1), r, paintY, mTextPaint);
@@ -1015,8 +989,8 @@ DialogInterface.OnDismissListener, Runnable {
             }
         }
         // end while
-		if (showLN) {
-			int left = mLeftOffset - mSpaceWidth / 2;
+        if (showLN) {
+            int left = mLeftOffset - mSpaceWidth / 2;
             mTextPaint.setColor(mColorScheme.getColor(Colorable.NON_PRINTING_GLYPH));
             canvas.drawLine(left, getScrollY(), left, getScrollY() + getHeight(), mTextPaint);
         }
@@ -1227,10 +1201,10 @@ DialogInterface.OnDismissListener, Runnable {
      * Invalidate rows from startRow (inclusive) to the end of the field
      */
     void invalidateFromRow(int startRow) {
-		if (mCtrlr.lexing)
-			return;
-        TextWarriorException.assertVerbose(startRow >= 0,
-										   "Invalid startRow");
+        if (mCtrlr.lexing)
+            return;
+
+        TextWarriorException.assertVerbose(startRow >= 0, "Invalid startRow");
 
         Rect caretSpill = mNavMethod.getCaretBloat();
         //TODO The ascent of (startRow+1) may jut inside startRow, so part of
