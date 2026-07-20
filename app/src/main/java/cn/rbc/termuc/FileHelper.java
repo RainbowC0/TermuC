@@ -99,7 +99,7 @@ public class FileHelper {
 			uri = DocumentsContract.buildDocumentUriUsingTree(app.treeUri, f.getParent());
 			uri = DocumentsContract.createDocument(crv, uri, "text/plain", f.getName());
 		}
-		return crv.openOutputStream(uri);
+		return crv.openOutputStream(uri, "wt");
 	}
 
 	public final static long lastModified(File f) {

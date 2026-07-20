@@ -405,6 +405,7 @@ DialogInterface.OnDismissListener, Runnable {
 		if (hDoc.isWordWrap()) {
             int r = (int)((getScrollY()+cy)/oldHeight);
             int i = hDoc.getRowOffset(r);
+            if (i == -1) i = hDoc.length()-1;
             hDoc.analyzeWordWrap();
             i = hDoc.findRowNumber(i);
             y = rowHeight()*(i-r);
