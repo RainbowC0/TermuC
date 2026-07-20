@@ -777,7 +777,7 @@ DialogInterface.OnDismissListener, Runnable {
 
         int r = hDoc.logicalToRealIndex(currIndex);
         int spanIndex = HelperUtils.lowerBound(spans, r);
-        if (spans.get(spanIndex).first > r)
+        if (spanIndex > 0 && spans.get(spanIndex).first > r)
             spanIndex--;
 		Pair currSpan = spans.get(spanIndex++);
 		Pair nextSpan = spanIndex < spans.size() ? spans.get(spanIndex++) : null;
@@ -827,13 +827,15 @@ DialogInterface.OnDismissListener, Runnable {
 				hidx++;
 			} while (hidx < hlen);
 		}
-		int mHt = 1 + hDoc.findLineNumber(mCaretPosition);
-		int mI = hDoc.findMark(currLineNum);
+		Document doc = hDoc;
+		int caretPos = mCaretPosition;
+		int mHt = 1 + (doc.isWordWrap() ? doc.findLineNumber(caretPos) : doc.findRowNumber(caretPos));
+		int mI = doc.findMark(currLineNum);
 		if (mI < 0)
 			mI = ~mI;
 		// row by row
 		int rowEnd = 0;
-        int endRowNum = Math.min(hDoc.getRowCount(), 1+getEndPaintRow(canvas));
+        int endRowNum = Math.min(doc.getRowCount(), 1+getEndPaintRow(canvas));
 		boolean markedCaret = false;
         for (int m = -1; currRowNum < endRowNum && currIndex < mL; currRowNum++) {
 			if (rowEnd == 0) { // new line
@@ -1090,11 +1092,11 @@ DialogInterface.OnDismissListener, Runnable {
      * @param c Character to measure
      * @return Advance of character, in pixels
      */
-    @Override
     public int getAdvance(char c) {
         return getAdvance(c, 0);
     }
 
+    @Override
     public int getAdvance(char c, int x) {
         int advance;
         switch (c) {

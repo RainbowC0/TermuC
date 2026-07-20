@@ -14,7 +14,7 @@ import java.io.*;
 import java.util.List;
 import android.widget.*;
 
-public class TextEditor extends FreeScrollingTextField implements OnCaretScrollListener {
+public class TextEditor extends FreeScrollingTextField  {
     // private Document _inputtingDoc;
     // private boolean _isWordWrap;
     private Context mContext;
@@ -22,7 +22,7 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
     private int _index;
 	private Formatter mFormatter;
     private OnEditedListener mEditedListener;
-    private OnCaretScrollListener mCrtLis;
+    protected OnCaretScrollListener mCrtLis;
     //private boolean mDirty;
 
     /*
@@ -66,7 +66,6 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
         setAutoIndent(true);
         setUseGboard(true);
         setNavigationMethod(new EditorNavigationMethod(this));
-        crtLis = this;
     }
 
     @Override
@@ -224,12 +223,6 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
         mEditedListener = edlis;
     }
 
-    public void updateCaret(int caretIndex) {
-        ((YoyoNavigationMethod)mNavMethod).updateCaret(caretIndex);
-        if (mCrtLis != null)
-            mCrtLis.updateCaret(caretIndex);
-	}
-
 	public void addCaretListener(OnCaretScrollListener crtlis) {
 		mCrtLis = crtlis;
 	}
@@ -356,6 +349,12 @@ public class TextEditor extends FreeScrollingTextField implements OnCaretScrollL
              }
              return super.onSingleTapUp(e);
          }
+
+         @Override
+         public void updateCaret(int caretIndex) {
+             super.updateCaret(caretIndex);
+             OnCaretScrollListener mCrtLis = ((TextEditor)mTextField).mCrtLis;
+             if (mCrtLis!=null) mCrtLis.updateCaret(caretIndex);
+         }
      }
 }
-

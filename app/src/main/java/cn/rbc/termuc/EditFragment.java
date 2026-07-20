@@ -291,6 +291,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 		super.onHiddenChanged(hidden);
 		if (!hidden) {
 			MainActivity ma = (MainActivity)getActivity();
+			if (ma == null) return;
 			ma.setEditor(ed);
 			ma.setFileRunnable((type & TYPE_HEADER) == 0);
 			invalidateType();

@@ -363,6 +363,8 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 		} else if (id == R.id.rename) {
             bd.setTitle(R.string.rename);
             EditText ed = new EditText(this);
+            ed.setSingleLine();
+            ed.setMaxLines(1);
             bd.setView(ed);
             transTxV = ed;
             ed.setLayoutParams(
@@ -379,6 +381,8 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 			bd.setTitle(R.string.new_);
             if (id == R.id.newfile) {
 			    EditText ed = new EditText(this);
+                ed.setSingleLine();
+                ed.setMaxLines(1);
 			    bd.setView(ed);
 			    transTxV = ed;
 			    ed.setLayoutParams(

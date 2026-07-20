@@ -254,7 +254,7 @@ public class Document extends TextBuffer implements Parcelable {
     private boolean hasMinimumWidthForWordWrap() {
         final int maxWidth = _metrics.getRowWidth();
         //assume the widest char is 2ems wide
-        return (maxWidth >= 2 * _metrics.getAdvance('M'));
+        return (maxWidth >= 2 * _metrics.getAdvance('M', 0));
     }
 
     private WeakReference<ArrayList<Integer>> tempref = new WeakReference<>(null);
@@ -304,6 +304,7 @@ public class Document extends TextBuffer implements Parcelable {
                 end = j - 1;
         }
         final int maxWidth = _metrics.getRowWidth();
+        final int leftOffset = _metrics.getLeftOffset();
         int lineStart = offset;
         int lastBreakPos = -1;
         int currWidth = 0;
@@ -328,7 +329,7 @@ public class Document extends TextBuffer implements Parcelable {
                 continue;
             }
 
-            if ((currWidth += _metrics.getAdvance(c)) > maxWidth) {
+            if ((currWidth += _metrics.getAdvance(c, currWidth + leftOffset)) > maxWidth) {
                 if (lastBreakPos >= lineStart) {
                     lineStart = lastBreakPos + 1;
                     if (lineStart == _gapStartIndex)
@@ -338,12 +339,12 @@ public class Document extends TextBuffer implements Parcelable {
                 } else {
                     temp.add(offset);
                     lineStart = offset;
-                    currWidth = _metrics.getAdvance(c);
+                    currWidth = _metrics.getAdvance(c, 0);
                 }
                 lastBreakPos = -1;
                 continue;
             }
-            if (" ,;.\t\uFFFF".indexOf(c) >= 0) {
+            if (!Character.isJavaIdentifierPart(c)) {
                 lastBreakPos = offset;
                 breakCumWidth = currWidth;
             }
@@ -433,9 +434,10 @@ public class Document extends TextBuffer implements Parcelable {
          * Returns printed width of c.
          *
          * @param c Character to measure
+         * @param x Row offset of last character
          * @return Advance of character, in pixels
          */
-        int getAdvance(char c);
+        int getAdvance(char c, int x);
 
         /**
          * Returns the maximum width available for a row of text to be layout. This
@@ -444,6 +446,7 @@ public class Document extends TextBuffer implements Parcelable {
          * @return Maximum width of a row, in pixels
          */
         int getRowWidth();
+        int getLeftOffset();
     }
 
     @Override
