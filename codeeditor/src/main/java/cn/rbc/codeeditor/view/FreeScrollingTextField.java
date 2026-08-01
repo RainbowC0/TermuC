@@ -1888,14 +1888,14 @@ DialogInterface.OnDismissListener, Runnable {
         mCtrlr.copy(cb);
     }
 
-    public void paste(String text) {
+    public void paste(CharSequence text) {
         mCtrlr.paste(text);
     }
 
     public void delete() {
         mCtrlr.selectionDelete();
-		mCtrlr.determineSpans();
-		//tc
+        mCtrlr.determineSpans();
+        //tc
     }
 
     public void sendPrintableChar(char c) {

@@ -77,7 +77,7 @@ public class MainHandler extends Handler {
                     Tokenizer.getLanguage().setTypes(EditFragment.DEFTYPES);
                     if (ma == null) return;
 					FragmentManager fm = ma.getFragmentManager();
-					for (int i=ma.getActionBar().getNavigationItemCount()-1;i>=0;i--) {
+					for (int i=ma.getItemCount()-1;i>=0;i--) {
 						Fragment f = fm.findFragmentByTag(ma.getTag(i));
 						if (f==null) continue;
 						TextEditor te = (TextEditor)f.getView();
@@ -263,7 +263,7 @@ public class MainHandler extends Handler {
                                 if (id == Lsp.SEMTOK) {
                                     Set<String> typs = parseSemTokens(lsp, jr);
                                     jr.close();
-                                    cacheData.put(ma.getTag(ma.getActionBar().getSelectedNavigationIndex()), typs);
+                                    cacheData.put(ma.getTag(ma.getSelectedItem()), typs);
                                     sc = typs.hashCode();
                                     if (oldHash != sc) {
                                         Tokenizer.getLanguage().setTypes(typs);
@@ -420,7 +420,7 @@ public class MainHandler extends Handler {
                                         applyEdit(te, (List<Edit>)l);
 									}
 								} else if (tmp3 instanceof Command) {
-                                    int tit = ma.getActionBar().getSelectedNavigationIndex();
+                                    int tit = ma.getSelectedItem();
                                     EditFragment frag = (EditFragment)ma.getFragmentManager().findFragmentByTag(ma.getTag(tit));
                                     frag.setActions(l);
                                 } else if (doc.getHighlights() != null) {
@@ -569,7 +569,7 @@ public class MainHandler extends Handler {
         if (uri.startsWith(Utils.PREF) && !uri.startsWith("/home", Utils.PREF.length())) {
             uri = Utils.PREF + "/home/.." + uri.substring(Utils.PREF.length());
         }
-        String curr = ma.getTag(ma.getActionBar().getSelectedNavigationIndex());
+        String curr = ma.getTag(ma.getSelectedItem());
         if (!curr.equals(uri)) {
             ma.openFile(new File(uri));
             ma.getFragmentManager().executePendingTransactions();

@@ -15,6 +15,11 @@
 			android:title="@string/pure_mode"
 			android:defaultValue="false"
 			/>
+        <CheckBoxPreference
+            android:key="navtab"
+            android:title="@string/navtab"
+            android:defaultValue="false"
+            />
 	</PreferenceCategory>
 	<PreferenceCategory
 		android:title="@string/editor">
@@ -63,6 +68,11 @@
             android:key="autocaps"
             android:title="@string/auto_caps"
             android:defaultValue="false"
+            />
+        <EditTextPreference
+            android:key="custom_sym"
+            android:title="@string/custom_sym"
+            android:defaultValue="{}();,.=&quot;|&amp;![]&lt;&gt;#+-/*?:_"
             />
 	</PreferenceCategory>
 	<PreferenceCategory

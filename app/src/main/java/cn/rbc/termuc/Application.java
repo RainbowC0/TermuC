@@ -11,6 +11,7 @@ public class Application extends android.app.Application {
 	final static String
     KEY_THEME = "theme",
 	KEY_PUREMODE = "puremode",
+    KEY_NAVTAB = "navtab",
 	KEY_FONT = "font",
 	KEY_MYFONT = "myfont",
 	KEY_WORDWRAP = "wordwrap",
@@ -20,6 +21,7 @@ public class Application extends android.app.Application {
 	KEY_TABSIZE = "tabsize",
     KEY_SUGGUESTION = "suggestion",
     KEY_AUTOCAPS = "autocaps",
+    KEY_SYMS = "custom_sym",
 	KEY_SHOW_HIDDEN = "showhidden",
 	KEY_CHECKAPP = "checkapp",
 	KEY_INITAPP = "initapp",
@@ -29,8 +31,8 @@ public class Application extends android.app.Application {
 	KEY_LSP_PORT = "lspport",
 	KEY_TERMUX_URI = "_termux_uri";
 
-	public static boolean pure_mode, wordwrap, whitespace, show_hidden, usespace, suggestion, auto_caps;
-	public static String theme, font, cflags, completion, lsp_host;
+	public static boolean pure_mode, navtab, wordwrap, whitespace, show_hidden, usespace, suggestion, auto_caps;
+	public static String theme, font, syms, cflags, completion, lsp_host;
 	public static int lsp_port, textsize, tabsize;
 
     MainHandler hand;
@@ -82,6 +84,7 @@ public class Application extends android.app.Application {
 		SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         theme = sp.getString(KEY_THEME, getResources().getString(R.string.def_thm));
         pure_mode = sp.getBoolean(KEY_PUREMODE, false);
+        navtab = sp.getBoolean(KEY_NAVTAB, false);
 		String f = sp.getString(KEY_FONT, "m");
 		if ("c".equals(f))
 			f = sp.getString(KEY_MYFONT, "");
@@ -93,6 +96,7 @@ public class Application extends android.app.Application {
 		tabsize = Integer.parseInt(sp.getString(KEY_TABSIZE, "4"));
         suggestion = sp.getBoolean(KEY_SUGGUESTION, false);
         auto_caps = sp.getBoolean(KEY_AUTOCAPS, false);
+        syms = sp.getString(KEY_SYMS, "{}();,.=\"|&![]<>#+-/*?:_");
 		show_hidden = sp.getBoolean(KEY_SHOW_HIDDEN, true);
         cflags = sp.getString(KEY_CFLAGS, "-lm -Wall");
 		completion = sp.getString(KEY_COMPLETION, "s");

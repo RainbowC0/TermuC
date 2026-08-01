@@ -12,6 +12,7 @@ implements Iterable<String>
     private final static String BITS = "bs";
     private ArrayList<Boolean> bs;
     private View.OnClickListener mOnCloseListener;
+    private OnChangedListener mOnChangedListener;
 
 	public HeaderAdapter(Context context, int id) {
 		super(context, id, android.R.id.text1);
@@ -64,11 +65,24 @@ implements Iterable<String>
 	}
 
     @Override
+    public void add(String object) {
+        super.add(object);
+        if (mOnChangedListener!=null) mOnChangedListener.onAdd(object);
+    }
+
+    @Override
     public void remove(String object) {
         final int pos = this.getPosition(object);
         if (bs.size() > pos)
             bs.remove(pos);
         super.remove(object);
+        if (mOnChangedListener!=null) mOnChangedListener.onRemove(object);
+    }
+
+    @Override
+    public void clear() {
+        super.clear();
+        if (mOnChangedListener!=null) mOnChangedListener.onClear();
     }
 
     public void setOnCloseListener(View.OnClickListener lis) {
@@ -93,4 +107,14 @@ implements Iterable<String>
 	public Spliterator<String> spliterator() {
 		return null;
 	}
+
+    public void setOnChangedListener(OnChangedListener lis) {
+        mOnChangedListener = lis;
+    }
+
+    interface OnChangedListener {
+        void onAdd(String item);
+        void onRemove(String item);
+        void onClear();
+    }
 }

@@ -33,11 +33,10 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
     private final static int ACTION_BASE_ID = 0x80000000;
 	final static String FL = "f", TP = "t", TS = "s", VS = "v";
 	private File fl;
-	private TextEditor ed;
 	int type;
 	private String C;
 	private long lastModified;
-	private List<Range> changes = new ArrayList<>();
+	private final List<Range> changes = new ArrayList<>();
     static final Set<String> DEFTYPES = new HashSet<>(0);
 
 	public EditFragment() {
@@ -52,11 +51,11 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		final MainActivity ma = (MainActivity)getActivity();
 		TextEditor editor = ma.newEditor();
-		ed = editor;
 		if ("d".equals(Application.theme)
             || "s".equals(Application.theme)
-            && ((getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES))
-			editor.setColorScheme(ColorSchemeDark.getInstance());
+            && ((getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES)) {
+            editor.setColorScheme(ColorSchemeDark.getInstance());
+        }
         editor.setPureMode(Application.pure_mode);
 		DisplayMetrics dm = getResources().getDisplayMetrics();
 		editor.setTypeface(Application.typeface());
@@ -72,31 +71,31 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         editor.setOnEditedListener(ma);
         editor.addCaretListener(this);
         editor.setClipboardCallback(this, ClipboardPanel.CREATE_BEFORE|ClipboardPanel.CREATE_AFTER);
-        try {
-            Document doc = null;
-            if (savedInstanceState != null) {
-                String pth = (String)savedInstanceState.getCharSequence(FL);
-                fl = new File(pth);
-                type = savedInstanceState.getInt(TP, type);
-                mVer = savedInstanceState.getInt(VS, mVer);
-                doc = Application.getInstance().load(pth);
-                editor.setTextSize(savedInstanceState.getInt(TS));
-            }
-            invalidateType();
-            if (doc != null) {
-                doc.setMetrics(editor);
-                doc.resetRowTable();
-                editor.setDocument(doc);
-            } else {
-                ma.setEditor(editor);
-                doc = load();
+        Document doc = null;
+        if (savedInstanceState != null) {
+            String pth = (String)savedInstanceState.getCharSequence(FL);
+            fl = new File(pth);
+            type = savedInstanceState.getInt(TP, type);
+            mVer = savedInstanceState.getInt(VS, mVer);
+            doc = Application.getInstance().load(pth);
+            editor.setTextSize(savedInstanceState.getInt(TS));
+        }
+        invalidateType();
+        if (doc != null) {
+            doc.setMetrics(editor);
+            doc.resetRowTable();
+            editor.setDocument(doc);
+        } else {
+            ma.setEditor(editor);
+            try {
+                doc = load(editor);
                 if ("s".equals(Application.completion))
-                    onOpen();
+                    onOpen(doc);
+            } catch (IOException fnf) {
+                fnf.printStackTrace();
+                HelperUtils.show(Toast.makeText(ma, getString(R.string.open_failed) + fnf.getMessage(), Toast.LENGTH_SHORT));
             }
-        } catch (IOException fnf) {
-			fnf.printStackTrace();
-			HelperUtils.show(Toast.makeText(ma, getString(R.string.open_failed) + fnf.getMessage(), Toast.LENGTH_SHORT));
-		}
+        }
 		if ((type & TYPE_MASK) != TYPE_TXT) {
 			if (hasLsp() && "s".equals(Application.completion))
 				editor.setFormatter(this);
@@ -110,7 +109,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 		return C;
 	}
 
-    static final boolean isExecutable(int type) {
+    static boolean isExecutable(int type) {
         return (type & TYPE_HEADER) == 0;
     }
 
@@ -145,10 +144,16 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         }
     }
 
-	@Override
+    @Override
+    public TextEditor getView() {
+        return (TextEditor) super.getView();
+    }
+
+    @Override
 	public void updateCaret(int caretIndex) {
         if (!("s".equals(Application.completion) && hasLsp())) return;
         // in lsp
+        TextEditor ed = getView();
 		Document text = ed.getText();
 		if (ed.isSelectText2()
             || !(Character.isUnicodeIdentifierPart(text.charAt(caretIndex))
@@ -165,6 +170,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	@Override
 	public void format(Document txt, int width) {
         if (!hasLsp()) return;
+        TextEditor ed = getView();
 		int start = ed.getSelectionStart(), end = ed.getSelectionEnd();
 		Lsp lsp = Application.getInstance().lsp;
         if (start == end)
@@ -194,7 +200,8 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	public void onChanged(String c, int start, boolean ins, boolean typ) {
         if (!"s".equals(Application.completion))
             return;
-		TextEditor editor = ed;
+		TextEditor editor = getView();
+        if (editor == null) return;
 		Document text = editor.getText();
 		text.setHighlights(null);
 		boolean wordwrap = editor.isWordWrap();
@@ -258,15 +265,15 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
             Language lang = Tokenizer.getLanguage();
             if (typs != lang.getTypes()) {
                 lang.setTypes(typs);
-                ed.mCtrlr.determineSpans();
+                getView().mCtrlr.determineSpans();
             }
         }
 	}
 
-    public void onOpen() {
+    public void onOpen(Document doc) {
         if (hasLsp()) {
             Lsp lsp = Application.getInstance().lsp;
-            lsp.didOpen(fl, (type & TYPE_C) != 0 ? "c" : "cpp", ed.getText().toString());
+            lsp.didOpen(fl, (type & TYPE_C) != 0 ? "c" : "cpp", doc.toString());
             lsp.semanticTokensFull(fl);
         }
     }
@@ -274,7 +281,8 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	@Override
 	public void onClick(DialogInterface diag, int id) {
 		try {
-			Document cs = load();
+            TextEditor ed = getView();
+			Document cs = load(ed);
             ed.mCtrlr.determineSpans();
             if ("s".equals(Application.completion) && hasLsp()) {
 			    Lsp lsp = Application.getInstance().lsp;
@@ -292,10 +300,12 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 		if (!hidden) {
 			MainActivity ma = (MainActivity)getActivity();
 			if (ma == null) return;
+			TextEditor ed = getView();
 			ma.setEditor(ed);
 			ma.setFileRunnable((type & TYPE_HEADER) == 0);
 			invalidateType();
 			refresh();
+			ed.requestFocus();
 		}
 	}
 
@@ -303,16 +313,16 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	public void onSaveInstanceState(Bundle outState) {
 		super.onSaveInstanceState(outState);
         String pth = fl.getAbsolutePath();
-        Application.getInstance().store(pth, ed.getText());
+        Application.getInstance().store(pth, getView().getText());
 		outState.putCharSequence(FL, pth);
 		outState.putInt(TP, type);
-		outState.putInt(TS, (int)ed.getTextSize());
+		outState.putInt(TS, (int)getView().getTextSize());
 		outState.putInt(VS, mVer);
 	}
 
 	public void save() throws IOException {
         Writer writer = new OutputStreamWriter(FileHelper.openOutputStream(fl));
-        Document doc = ed.getText();
+        Document doc = getView().getText();
         doc.markVersion();
         Reader rd = new CharSeqReader(doc);
         char[] buf = new char[1024];
@@ -323,13 +333,13 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         rd.close();
         writer.close();
         lastModified = FileHelper.lastModified(fl);
-        ed.setEdited(doc.getMarkedVersion() != doc.getCurrentVersion());
+        getView().setEdited(doc.getMarkedVersion() != doc.getCurrentVersion());
         if ("s".equals(Application.completion) && hasLsp()) {
             Application.getInstance().lsp.didSave(fl);
         }
     }
 
-	public Document load() throws IOException {
+	public Document load(TextEditor ed) throws IOException {
 		Reader fr = new InputStreamReader(FileHelper.openInputStream(fl));
 		char[] buf = new char[1024];
         int i;
@@ -408,13 +418,13 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
     private List<Command> tActs;
     void setActions(List<Command> actions) {
         tActs = actions;
-        ed.getClipboardPanel().invalidate();
+        getView().getClipboardPanel().invalidate();
     }
 
     @Override
     public boolean onPrepareActionMode(ActionMode p1, Menu p2)
     {
-        FreeScrollingTextField te = ed;
+        FreeScrollingTextField te = getView();
         
         int start = te.getSelectionStart(), end = te.getSelectionEnd();
         p2.removeGroup(1);
@@ -434,7 +444,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
             return true;
         }
         List<ErrSpan> dg;
-        if ((dg = ed.getText().getDiag()) != null && dg.size()>0) {
+        if ((dg = te.getText().getDiag()) != null && dg.size()>0) {
             // before
             Lsp lsp = Application.getInstance().lsp;
             int stl, stc, enl, enc;
@@ -482,6 +492,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
     public boolean onActionItemClicked(ActionMode p1, MenuItem p2)
     {
         int id = p2.getItemId();
+        TextEditor ed = getView();
         switch (id) {
             case R.id.goto_:
                 if ("s".equals(Application.completion)) {

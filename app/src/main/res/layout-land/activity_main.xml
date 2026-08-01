@@ -4,10 +4,16 @@
 	android:layout_width="match_parent"
 	android:layout_height="match_parent">
 
+    <include layout="@layout/key_panel"
+             android:layout_height="wrap_content"
+             android:layout_width="match_parent"
+             android:layout_alignParentBottom="true"/>
+
 	<include layout="@layout/editfrag"
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
-		android:layout_toRightOf="@id/subcontainer"/>
+		android:layout_toRightOf="@id/subcontainer"
+        android:layout_above="@id/keys"/>
 
 	<ImageButton
 		android:src="@android:drawable/ic_menu_more"
@@ -21,31 +27,26 @@
 		android:onClick="showList"
 		android:layout_alignParentBottom="true"/>
 
-	<LinearLayout
-		android:id="@id/subcontainer"
-		android:layout_width="wrap_content"
-		android:layout_height="match_parent"
-		android:orientation="horizontal"
-		android:layout_alignParentLeft="true"
-		android:visibility="gone"
-		android:background="?android:attr/colorBackground">
+    <LinearLayout
+            android:id="@id/subcontainer"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:layout_alignParentLeft="true"
+            android:visibility="gone"
+            android:background="?android:attr/colorBackground">
 
-		<ListView
-			android:layout_width="240dp"
-			android:fastScrollEnabled="true"
-			android:layout_height="match_parent"
-			android:id="@id/file_list"/>
+        <ListView
+                android:layout_width="240dp"
+                android:fastScrollEnabled="true"
+                android:layout_height="match_parent"
+                android:id="@id/file_list"/>
 
-		<View
-			android:background="?android:attr/textColorLink"
-			android:layout_width="2dp"
-			android:layout_height="match_parent"/>
-	</LinearLayout>
-
-	<include layout="@layout/key_panel"
-        android:layout_height="wrap_content"
-        android:layout_width="match_parent"
-        android:layout_alignParentBottom="true"/>
+        <View
+                android:background="?android:attr/textColorLink"
+                android:layout_width="2dp"
+                android:layout_height="match_parent"/>
+    </LinearLayout>
 
 </RelativeLayout>
 

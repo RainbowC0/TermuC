@@ -2,6 +2,7 @@ package cn.rbc.codeeditor.view;
 
 import android.content.*;
 import android.os.*;
+import android.text.TextUtils;
 import android.view.inputmethod.*;
 import android.widget.*;
 import cn.rbc.codeeditor.lang.*;
@@ -154,12 +155,12 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
 		char c;
         for (i = startOfLine; i < pos;) {
             c = doc.charAt(i++);
-            if (c != ' ' && c != Language.TAB)
-                break;
             if (c == Language.TAB)
                 whitespaceCount += mTL-whitespaceCount%mTL;
             else if (c == ' ')
                 ++whitespaceCount;
+            else
+                break;
         }
         //寻找最后字符
         int endChar = 0;
@@ -316,7 +317,7 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
 
     /**
      * This helper method should only be used by internal methods after setting
-     * mTextFiledl.mCaretPosition, in order to to recalculate the new row the caret is on.
+     * mTextFiledl.mCaretPosition, in order to recalculate the new row the caret is on.
      */
     void updateCaretRow() {
 		FreeScrollingTextField fld = field;
@@ -506,7 +507,7 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
      * <p>
      * After insertion, the inserted area will be invalidated.
      */
-    public void paste(String text) {
+    public void paste(CharSequence text) {
         if (text == null)
             return;
 
@@ -515,10 +516,12 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
 		doc.setTyping(true);
         selectionDelete();
 
-        doc.insertBefore(text.toCharArray(), fd.mCaretPosition, System.nanoTime());
-        fd.onAdd(text, fd.mCaretPosition, text.length());
+        char[] chars = new char[text.length()];
+        TextUtils.getChars(text, 0, chars.length, chars, 0);
+        doc.insertBefore(chars, fd.mCaretPosition, System.nanoTime());
+        fd.onAdd(text, fd.mCaretPosition, chars.length);
 
-        fd.mCaretPosition += text.length();
+        fd.mCaretPosition += chars.length;
         updateCaretRow();
 
         fd.setEdited(true);
@@ -725,13 +728,13 @@ public class TextFieldController implements Tokenizer.LexCallback, Runnable {
             doc.insertBefore(text.toCharArray(), fld.mCaretPosition, System.nanoTime());
             fld.mCaretPosition += text.length();
             dirty = true;
-        	fld.onAdd(text, fld.mCaretPosition, text.length() - charCount);
+            fld.onAdd(text, fld.mCaretPosition, text.length() - charCount);
 		}
         if (dirty) {
             fld.setEdited(true);
             determineSpans();
-			fld.focusCaret();
-			return;
+            fld.focusCaret();
+            return;
         }
 
         int originalRow = fld.mCaretRow;

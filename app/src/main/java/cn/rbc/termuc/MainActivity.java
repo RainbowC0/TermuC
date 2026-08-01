@@ -5,7 +5,6 @@ import android.app.AlertDialog.*;
 import android.content.*;
 import android.content.pm.*;
 import android.content.res.*;
-import android.database.*;
 import android.graphics.*;
 import android.net.*;
 import android.os.*;
@@ -28,7 +27,8 @@ public class MainActivity extends Activity implements
 ActionBar.OnNavigationListener, OnGlobalLayoutListener,
 AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener,
 DialogInterface.OnClickListener, MenuItem.OnMenuItemClickListener,
-TextEditor.OnEditedListener, View.OnClickListener, Runnable {
+TextEditor.OnEditedListener, View.OnClickListener, Runnable,
+HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
 
 	public final static int SETTING = 0, ACCESS_FILE = 1, SHOW_FLOATING = 2, REQ_FOLDER = 3;
 	public final static String PWD = "p", SHOWLIST = "l", FILES = "o", TESTAPP = "t", INITAPP = "i";
@@ -36,18 +36,19 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 	private FileAdapter adp;
 	private EditFragment lastFrag = null;
 	private boolean byhand = true, keyboardShown = false, transZ;
-    private View keys, showlist, transV;
+    private View showlist, transV;
+    private HorizontalScrollView keys, tabScroller;
     private File pwd, prj, root;
     private TextView pwdpth, msgEmpty, transTxV;
     private LinearLayout subc;
     private TextEditor codeEditor;
+    private LinearLayout tabs;
 	private Menu appMenu;
 	private SearchAction mSearchAction;
 	private String transStr;
 	private Dialog transDlg;
     private AttributeSet editAttr;
     private DebugPanel panel;
-    private DataSetObserver obs;
     private int reqCode;
 
 	private void envInit(SharedPreferences pref) {
@@ -103,40 +104,20 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
                 | View.SYSTEM_UI_FLAG_FULLSCREEN);
         }
         super.onCreate(savedInstanceState);
-		hda = new HeaderAdapter(new ContextThemeWrapper(getBaseContext(), android.R.style.Theme_Holo), R.layout.header_item);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            Resources.Theme rt = getResources().newTheme();
-            rt.applyStyle(android.R.style.Theme_Holo, true);
-            hda.setDropDownViewTheme(rt);
-        }
+        ContextThemeWrapper themedContext = new ContextThemeWrapper(getBaseContext(), android.R.style.Theme_Holo);
+        hda = new HeaderAdapter(themedContext, R.layout.header_item);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M)
+            hda.setDropDownViewTheme(themedContext.getTheme());
         hda.setOnCloseListener(this);
 		getActionBar().setListNavigationCallbacks(hda, this);
-		hda.registerDataSetObserver(obs = new DataSetObserver() {
-				private int lastCount = 0;
-				public void onChanged() {
-					int count = hda.getCount();
-					if (count == 0) {
-						ActionBar ab = getActionBar();
-						ab.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
-						ab.setDisplayShowTitleEnabled(true);
-						msgEmpty.setVisibility(View.VISIBLE);
-						showFullMenu(false);
-					} else if (lastCount == 0) {
-						ActionBar ab = getActionBar();
-						ab.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST);
-						ab.setDisplayShowTitleEnabled(false);
-						msgEmpty.setVisibility(View.GONE);
-						showFullMenu(true);
-					}
-					lastCount = count;
-				}
-			});
+		hda.setOnChangedListener(this);
 		setContentView(R.layout.activity_main);
 		showlist = findViewById(R.id.show_list);
 		keys = findViewById(R.id.keys);
+		((KeyPanel)keys.getChildAt(0)).resetKeys(Application.syms);
 		subc = findViewById(R.id.subcontainer);
 		ListView l = findViewById(R.id.file_list);
-		View hd = View.inflate(this, R.layout.list_header, null);
+		View hd = getLayoutInflater().inflate(R.layout.list_header, null);
 		pwdpth = hd.findViewById(R.id.pwd);
 		msgEmpty = findViewById(R.id.msg_empty);
 		l.addHeaderView(hd);
@@ -144,6 +125,13 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 		l.setAdapter(adp);
 		l.setOnItemClickListener(this);
 		l.setOnItemLongClickListener(this);
+        if (conf.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            tabScroller = (HorizontalScrollView) LayoutInflater.from(themedContext).inflate(R.layout.tabs, null);
+        } else {
+            tabScroller = findViewById(R.id.tabScroller);
+        }
+        tabs = tabScroller.findViewById(android.R.id.tabs);
+        tabs.setTag(0);
         panel = new DebugPanel(this);
 		getWindow().getDecorView().getViewTreeObserver().addOnGlobalLayoutListener(this);
 		mSearchAction = new SearchAction(this);
@@ -383,12 +371,12 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 			    EditText ed = new EditText(this);
                 ed.setSingleLine();
                 ed.setMaxLines(1);
-			    bd.setView(ed);
+                bd.setView(ed);
 			    transTxV = ed;
 			    ed.setLayoutParams(
 				new ViewGroup.LayoutParams(
-					ViewGroup.LayoutParams.FILL_PARENT,
-					ViewGroup.LayoutParams.FILL_PARENT
+					ViewGroup.LayoutParams.MATCH_PARENT,
+					ViewGroup.LayoutParams.MATCH_PARENT
 				));
 				ed.setId(R.id.newfile);
 				ed.setHint(R.string.hint_filename);
@@ -411,6 +399,38 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 		if (Project.rootPath == null||exec)
 			appMenu.findItem(R.id.run).setVisible(exec);
 	}
+
+    void selectItem(int pos) {
+        if (Application.navtab) {
+            View vsel = tabs.getChildAt(pos);
+            vsel.setSelected(true);
+            onLayoutChange(vsel, vsel.getLeft(), -1, vsel.getRight(), 0,0,0,0,0);
+            int lastSelected = (Integer)tabs.getTag();
+            if (lastSelected == pos) return;
+            vsel = tabs.getChildAt(lastSelected);
+            if (vsel != null) vsel.setSelected(false);
+            tabs.setTag(pos);
+            onNavigationItemSelected(pos, pos);
+        } else {
+            getActionBar().setSelectedNavigationItem(pos);
+        }
+    }
+
+    int getSelectedItem() {
+        if (Application.navtab) {
+            return (Integer)tabs.getTag();
+        } else {
+            return getActionBar().getSelectedNavigationIndex();
+        }
+    }
+
+    int getItemCount() {
+        if (Application.navtab) {
+            return tabs.getChildCount();
+        } else {
+            return getActionBar().getNavigationItemCount();
+        }
+    }
 
 	boolean openFile(File f) {
 		String _it = f.getAbsolutePath();
@@ -439,7 +459,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 		}
 		boolean b = _i>=0;
 		if (b) {
-			getActionBar().setSelectedNavigationItem(_i);
+            selectItem(_i);
 			byhand = b;
 		}
 		return b;
@@ -479,7 +499,10 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 		EditFragment ef = null;
 		for (String i:opens) {
 			if (i.equals(pth)) {
-                if (s) lastFrag.onOpen();
+                if (s) {
+                    EditFragment last = lastFrag;
+                    last.onOpen(last.getView().getText());
+                }
 				continue;
 			}
 			File f = new File(i);
@@ -492,7 +515,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 		}
 		if (ef!=null) {
 			byhand = false;
-			getActionBar().setSelectedNavigationItem(hda.getCount()-1);
+			selectItem(hda.getCount()-1);
 			if (ef!=lastFrag && lastFrag!=null) {
 				fts.hide(lastFrag);
 				lastFrag = ef;
@@ -547,7 +570,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 				mSearchAction.show();
 				break;
 			case R.id.close:
-				closePage(getActionBar().getSelectedNavigationIndex());
+				closePage(getSelectedItem());
 				break;
 			case R.id.prj_attr:
 				openFile(new File(Project.rootPath, Project.PROJ));
@@ -558,12 +581,12 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 				FragmentManager fm = getFragmentManager();
 				FragmentTransaction trans = fm.beginTransaction();
                 Lsp lsp = Application.getInstance().lsp;
-				while (!hda.isEmpty()) {
-					String s = hda.getItem(0);
-					hda.remove(s);
+				for (int i=0,l=hda.getCount();i<l;i++) {
+					String s = hda.getItem(i);
 					trans.remove(fm.findFragmentByTag(s));
 					lsp.didClose(new File(s));
 				}
+                hda.clear();
 				trans.commit();
 				lastFrag = null;
 				appMenu.findItem(R.id.prj).setEnabled(false);
@@ -579,8 +602,13 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
     }
 
     @Override
-    public void onClick(View p1) {
-        closePage((Integer)p1.getTag());
+    public void onClick(View v) {
+        if (v.getId() == android.R.id.button1) // closeBtn
+            closePage((Integer)v.getTag());
+        else { // tab
+            int pos = tabs.indexOfChild(v);
+            selectItem(pos);
+        }
     }
 
 	public void popStorage(View v) {
@@ -592,23 +620,23 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 	}
 
     private void closePage(int pos) {
-        String _t = hda.getItem(pos);
-        hda.remove(_t);
+        String file = hda.getItem(pos);
+        hda.remove(file);
         FragmentManager fm = getFragmentManager();
-        FragmentTransaction mTans = fm.beginTransaction();
-        mTans.remove(fm.findFragmentByTag(_t));
-        int cnt = hda.getCount();
-        if (hda.getCount() > 0) {
-            if (cnt == pos)
+        FragmentTransaction tran = fm.beginTransaction();
+        EditFragment frg = (EditFragment) fm.findFragmentByTag(file);
+        if (!frg.isHidden() && hda.getCount() > 0) {
+            if (pos > 0) {
                 pos--;
-            lastFrag = (EditFragment)fm.findFragmentByTag(hda.getItem(pos));
-            mTans.show(lastFrag);
-        } else lastFrag = null;
-        mTans.commit();
+            }
+            tran.show(lastFrag = (EditFragment)fm.findFragmentByTag(hda.getItem(pos)));
+        }
+        tran.remove(frg);
+        tran.commit();
         Application app = Application.getInstance();
-        app.lsp.didClose(new File(_t));
-        app.hand.cacheData.remove(_t);
-        app.load(_t);
+        app.lsp.didClose(frg.getFile());
+        app.hand.cacheData.remove(file);
+        app.load(file);
     }
 
     public void inputKey(View view) {
@@ -631,10 +659,16 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 
     @Override
     public void onEdited(boolean edited) {
-        final int idx = getActionBar().getSelectedNavigationIndex();
+        final int idx = getSelectedItem();
         if (hda.getEdit(idx) != edited) {
             hda.setEdit(idx, edited);
-            hda.notifyDataSetChanged();
+            if (Application.navtab) {
+                TextView tv = tabs.getChildAt(idx).findViewById(android.R.id.text1);
+                String s = new File(hda.getItem(idx)).getName();
+                tv.setText(edited ? "*".concat(s) : s);
+            } else {
+                hda.notifyDataSetChanged();
+            }
         }
     }
 
@@ -653,6 +687,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 				if (!f.isHidden()) {
 					j = i;
 					_tp = f.type;
+					lastFrag = f;
 					codeEditor = (TextEditor)f.getView();
 				}
 				i++;
@@ -660,7 +695,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 			if (!hda.isEmpty()) {
                 hda.load(bundle);
 				byhand = false;
-				getActionBar().setSelectedNavigationItem(j);
+				selectItem(j);
 				byhand = true;
 				setFileRunnable(EditFragment.isExecutable(_tp));
 			}
@@ -767,7 +802,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 					Typeface tf = Application.typeface();
 					for (int i=hda.getCount() - 1;i >= 0;i--) {
 						EditFragment f = (EditFragment)fm.findFragmentByTag(hda.getItem(i));
-						TextEditor ed = (TextEditor)f.getView();
+						TextEditor ed = f.getView();
                         ed.setPureMode(Application.pure_mode);
 						ed.setFormatter(s ? f : null);
 						ed.setAutoComplete("l".equals(Application.completion));
@@ -778,8 +813,10 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 						ed.setTabSpaces(Application.tabsize);
                         ed.setSuggestion(Application.suggestion);
                         ed.setAutoCaps(Application.auto_caps);
-                        if (chg) f.onOpen();
-					}	
+                        if (chg) f.onOpen(ed.getText());
+					}
+                    notifyNavModeChanged();
+                    ((KeyPanel)keys.getChildAt(0)).resetKeys(Application.syms);
 				} else if (resultCode == RESULT_FIRST_USER) {
 					recreate();
 				}
@@ -892,8 +929,6 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 
     @Override
     protected void onDestroy() {
-        hda.unregisterDataSetObserver(obs);
-        obs = null;
         hda = null;
         panel.clean();
         panel = null;
@@ -916,6 +951,7 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
 
 	public void setEditor(TextEditor edit) {
 		codeEditor = edit;
+        ((KeyPanel)keys.getChildAt(0)).setEditor(edit);
 	}
 
 	public TextEditor getEditor() {
@@ -937,5 +973,176 @@ TextEditor.OnEditedListener, View.OnClickListener, Runnable {
             }
         }
         return new TextEditor(this, editAttr);
+    }
+
+    @Override
+    public void onAdd(String item) {
+        if (hda.getCount() == 1) {
+            if (Application.navtab) {
+                if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+                    tabScroller.setVisibility(View.VISIBLE);
+                } else {
+                    ActionBar bar = getActionBar();
+                    bar.setCustomView(tabScroller);
+                    bar.setDisplayShowCustomEnabled(true);
+                }
+            } else {
+                ActionBar ab = getActionBar();
+                ab.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST);
+                ab.setDisplayShowTitleEnabled(false);
+            }
+            msgEmpty.setVisibility(View.GONE);
+            showFullMenu(true);
+        }
+        if (!Application.navtab) return;
+        addTab(hda.getCount()-1, item);
+    }
+
+    private void addTab(int idx, String item) {
+        View tab = LayoutInflater.from(tabScroller.getContext()).inflate(R.layout.tab_item, tabs, false);
+        tab.setTag(item);
+        tab.setOnClickListener(this);
+        ((TextView)tab.findViewById(android.R.id.text1)).setText(new File(item).getName());
+        View closeBtn = tab.findViewById(android.R.id.button1);
+        closeBtn.setTag(idx);
+        closeBtn.setOnClickListener(this);
+        tabs.addView(tab, tab.getLayoutParams());
+        tab.addOnLayoutChangeListener(this);
+    }
+
+    @Override
+    public void onRemove(String item) {
+        if (hda.getCount() == 0) {
+            onClear();
+        }
+        if (!Application.navtab) return;
+        ViewGroup tabs = this.tabs;
+        int pos = 0, len = tabs.getChildCount();
+        while (pos<len) {
+            View v = tabs.getChildAt(pos);
+            if (item.equals(v.getTag())) {
+                tabs.removeViewAt(pos);
+                int selPos = (Integer)tabs.getTag();
+                if (pos == selPos) {
+                    if (pos > 0) pos--;
+                    if (pos < tabs.getChildCount()) { // exclude clearing condition
+                        tabs.getChildAt(pos).setSelected(true);
+                        tabs.setTag(pos);
+                    }
+                } else if (pos < selPos) {
+                    tabs.setTag(--selPos);
+                }
+                break;
+            }
+            pos++;
+        }
+        for (len--;pos<len;pos++) {
+            tabs.getChildAt(pos).findViewById(android.R.id.button1).setTag(pos);
+        }
+    }
+
+    @Override
+    public void onClear() {
+        if (Application.navtab) {
+            if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+                tabScroller.setVisibility(View.GONE);
+            } else {
+                ActionBar bar = getActionBar();
+                bar.setDisplayShowCustomEnabled(false);
+                bar.setCustomView(null);
+            }
+        } else {
+            ActionBar ab = getActionBar();
+            ab.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST);
+            ab.setDisplayShowTitleEnabled(false);
+        }
+        msgEmpty.setVisibility(View.VISIBLE);
+        showFullMenu(false);
+    }
+
+    @Override
+    public void onLayoutChange(View vsel, int left, int top, int right, int bottom, int oldLeft, int oldTop, int oldRight, int oldBottom) {
+        HorizontalScrollView tabScroller = this.tabScroller;
+        int scrollX = tabScroller.getScrollX();
+        if (left < scrollX)
+            tabScroller.smoothScrollTo(left, 0);
+        else if ((right -= tabScroller.getWidth()) > scrollX) {
+            tabScroller.smoothScrollTo(right, 0);
+        }
+        if (top == 0)
+            vsel.removeOnLayoutChangeListener(this);
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        // Handle Alt+Number shortcuts
+        int metaState;
+        if (Application.navtab && (metaState = event.getMetaState()) != 0 && (metaState & KeyEvent.META_ALT_MASK) == metaState) {
+            int childIndex = -2;
+
+            // Map key codes to indices (-1~8)
+            if (keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
+                childIndex = keyCode - KeyEvent.KEYCODE_1;
+            } else if (keyCode >= KeyEvent.KEYCODE_NUMPAD_0 && keyCode <= KeyEvent.KEYCODE_NUMPAD_9) {
+                childIndex = keyCode - KeyEvent.KEYCODE_NUMPAD_1;
+            }
+
+            if (childIndex != -2) {
+                ViewGroup group = tabs;
+                int childCount = group.getChildCount();
+
+                // Special case: -1 to last child
+                if (childIndex == -1) {
+                    childIndex = childCount - 1;
+                }
+
+                // Validate and perform click
+                if (childIndex >= 0 && childIndex < childCount) {
+                    View child = group.getChildAt(childIndex);
+                    if (child != null && child.isEnabled() && child.performClick()) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+    private void notifyNavModeChanged() {
+        if (hda.isEmpty()) return;
+        ActionBar bar = getActionBar();
+        int actionNavMode = bar.getNavigationMode();
+        int orientation = getResources().getConfiguration().orientation;
+        if (Application.navtab && actionNavMode == ActionBar.NAVIGATION_MODE_LIST) {
+            int selIdx = bar.getSelectedNavigationIndex();
+            bar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
+            bar.setDisplayShowTitleEnabled(true);
+            if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                bar.setDisplayShowCustomEnabled(true);
+                bar.setCustomView(tabScroller);
+            } else {
+                tabScroller.setVisibility(View.VISIBLE);
+            }
+            for (int i=0, l=hda.getCount(); i<l; i++) {
+                addTab(i, hda.getItem(i));
+            }
+            tabs.setTag(selIdx);
+            tabs.getChildAt(selIdx).setSelected(true);
+        } else if (!Application.navtab && actionNavMode == ActionBar.NAVIGATION_MODE_STANDARD) {
+            int selIdx = (Integer)tabs.getTag();
+            if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+                bar.setDisplayShowCustomEnabled(false);
+                bar.setCustomView(null);
+            } else {
+                tabScroller.setVisibility(View.GONE);
+            }
+            tabs.removeAllViews();
+            hda.notifyDataSetChanged();
+            bar.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST);
+            bar.setDisplayShowTitleEnabled(false);
+            byhand = false;
+            bar.setSelectedNavigationItem(selIdx);
+            byhand = true;
+        }
     }
 }

@@ -7,6 +7,7 @@
     <string name="dark">Dark</string>
     <string name="sys">System</string>
     <string name="pure_mode">Pure color</string>
+    <string name="navtab">Tab navigation mode</string>
     <string name="editor">Editor</string>
 	<string name="font">Font</string>
 	<string name="sans">Sans Serif</string>
@@ -19,6 +20,7 @@
 	<string name="tabsize">Tab size (\\t)</string>
     <string name="keyboard_suggestion">Allow keyboard suggestion</string>
     <string name="auto_caps">Capitals automatically</string>
+    <string name="custom_sym">Custom symbol panel</string>
     <string name="compiler">Compiler</string>
     <string name="cflags">Compiler flags</string>
 	<string name="run_">Run...</string>

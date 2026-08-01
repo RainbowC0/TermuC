@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:background="@drawable/tab_background"
+              android:orientation="horizontal"
+              android:layout_width="wrap_content"
+              android:layout_height="match_parent">
+    <TextView
+            android:id="@android:id/text1"
+            style="?android:attr/spinnerDropDownItemStyle"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:paddingEnd="0dp"
+            android:layout_height="match_parent"/>
+    <ImageView
+            android:id="@android:id/button1"
+            style="?android:attr/buttonBarButtonStyle"
+            android:contentDescription="@string/close"
+            android:layout_width="32dp"
+            android:src="@android:drawable/ic_menu_close_clear_cancel"
+            android:scaleType="centerInside"
+            android:layout_height="match_parent"/>
+</LinearLayout>

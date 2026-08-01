@@ -3,19 +3,20 @@ import android.content.*;
 import android.os.*;
 import android.preference.*;
 import android.view.*;
+import android.widget.EditText;
 
 public class SettingsActivity extends PreferenceActivity
 implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickListener
 {
 	private final static String TAG = "SettingsActivity", FT = "f";
 
-    private CheckBoxPreference mPureModePref, mWordWrapPref, mWhitespacePref, mUseSpacePref,
+    private CheckBoxPreference mPureModePref, mNavTabPref, mWordWrapPref, mWhitespacePref, mUseSpacePref,
             mShowHidden, mSuggestionPref, mAutoCapsPref;
-	private EditTextPreference mCFlagsPref, mHost, mPort;
+	private EditTextPreference mSymsPref, mCFlagsPref, mHost, mPort;
 	private ListPreference mThemePref, mFontPref, mSizePref, mTabSizePref, mEngine;
 
-	private boolean mPure, mWrap, mSpace, mUseSpace, mSuggestion, mAutoCaps;
-	private String mTheme, mComp, mFont, tpFont;
+	private boolean mPure, mNav, mWrap, mSpace, mUseSpace, mSuggestion, mAutoCaps;
+	private String mTheme, mComp, mFont, tpFont, mSyms;
 	private int mTabSize;
 
 	@Override
@@ -27,6 +28,7 @@ implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickLi
 
 		mThemePref = (ListPreference)findPreference(Application.KEY_THEME);
         mPureModePref = (CheckBoxPreference)findPreference(Application.KEY_PUREMODE);
+        mNavTabPref = (CheckBoxPreference)findPreference(Application.KEY_NAVTAB);
 		mFontPref = (ListPreference)findPreference(Application.KEY_FONT);
 		mFontPref.setOnPreferenceChangeListener(this);
 		mSizePref = (ListPreference)findPreference(Application.KEY_TEXTSIZE);
@@ -36,6 +38,7 @@ implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickLi
 		mTabSizePref = (ListPreference)findPreference(Application.KEY_TABSIZE);
         mSuggestionPref = (CheckBoxPreference)findPreference(Application.KEY_SUGGUESTION);
         mAutoCapsPref = (CheckBoxPreference)findPreference(Application.KEY_AUTOCAPS);
+        mSymsPref = (EditTextPreference)findPreference(Application.KEY_SYMS);
 		mShowHidden = (CheckBoxPreference)findPreference(Application.KEY_SHOW_HIDDEN);
 		mCFlagsPref = (EditTextPreference)findPreference(Application.KEY_CFLAGS);
 		mEngine = (ListPreference)findPreference(Application.KEY_COMPLETION);
@@ -48,12 +51,14 @@ implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickLi
 
         mTheme = Application.theme;
         mPure = Application.pure_mode;
+        mNav = Application.navtab;
 		mWrap = Application.wordwrap;
 		mSpace = Application.whitespace;
 		mUseSpace = Application.usespace;
 		mTabSize = Application.tabsize;
         mSuggestion = Application.suggestion;
         mAutoCaps = Application.auto_caps;
+        mSyms = Application.syms;
 		mComp = Application.completion;
 		mFont = tpFont = Application.font;
 	}
@@ -109,9 +114,10 @@ implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickLi
 
 	@Override
 	public void onBackPressed() {
-		setResult(mTheme != mThemePref.getValue()
+		setResult(!mTheme.equals(mThemePref.getValue())
 				  ? RESULT_FIRST_USER : 
 				  (mPure == mPureModePref.isChecked()
+                  && mNav == mNavTabPref.isChecked()
                   && mFont == tpFont
 				  && mWrap == mWordWrapPref.isChecked()
 				  && mSpace == mWhitespacePref.isChecked()
@@ -119,6 +125,7 @@ implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickLi
 				  && mTabSize == Integer.parseInt(mTabSizePref.getValue())
                   && mSuggestion == mSuggestionPref.isChecked()
                   && mAutoCaps == mAutoCapsPref.isChecked()
+                  && mSyms.equals(mSymsPref.getText())
 				  && mComp.equals(mEngine.getValue()))
 				  ? RESULT_CANCELED : RESULT_OK);
 		super.onBackPressed();
@@ -140,6 +147,7 @@ implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickLi
 	protected void onPause() {
 		Application.theme = mThemePref.getValue();
         Application.pure_mode = mPureModePref.isChecked();
+        Application.navtab = mNavTabPref.isChecked();
 		Application.wordwrap = mWordWrapPref.isChecked();
 		Application.whitespace = mWhitespacePref.isChecked();
 		Application.usespace = mUseSpacePref.isChecked();
@@ -149,6 +157,7 @@ implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickLi
 		Application.textsize = Integer.parseInt(mSizePref.getValue());
         Application.suggestion = mSuggestionPref.isChecked();
         Application.auto_caps = mAutoCapsPref.isChecked();
+        Application.syms = mSymsPref.getText();
 		Application.show_hidden = mShowHidden.isChecked();
 		Application.cflags = mCFlagsPref.getText();
 		Application.completion = mEngine.getValue();

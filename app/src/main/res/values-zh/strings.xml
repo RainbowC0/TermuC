@@ -7,6 +7,7 @@
     <string name="dark">暗主题</string>
     <string name="sys">跟随系统</string>
     <string name="pure_mode">纯色模式</string>
+    <string name="navtab">选项卡导航模式</string>
     <string name="editor">编辑器</string>
 	<string name="font">字体</string>
 	<string name="sans">无衬线</string>
@@ -19,6 +20,7 @@
 	<string name="tabsize">制表符大小（\\t）</string>
     <string name="keyboard_suggestion">允许键盘建议</string>
     <string name="auto_caps">自动输入大写</string>
+    <string name="custom_sym">自定义符号栏</string>
     <string name="compiler">编译器</string>
     <string name="cflags">编译选项</string>
 	<string name="run_">运行...</string>

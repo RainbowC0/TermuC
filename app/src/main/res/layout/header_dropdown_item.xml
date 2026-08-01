@@ -8,12 +8,13 @@
         style="?android:attr/spinnerDropDownItemStyle"
         android:singleLine="true"
         android:layout_weight="1"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="match_parent"
         android:ellipsize="start"/>
     <ImageView
         android:id="@android:id/button1"
         style="?android:attr/buttonBarButtonStyle"
+        android:contentDescription="@string/close"
         android:clickable="false"
         android:focusable="false"
         android:layout_width="?android:attr/listPreferredItemHeightSmall"
