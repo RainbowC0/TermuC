@@ -160,7 +160,7 @@ implements Preference.OnPreferenceChangeListener, Preference.OnPreferenceClickLi
         Application.syms = mSymsPref.getText();
 		Application.show_hidden = mShowHidden.isChecked();
 		Application.cflags = mCFlagsPref.getText();
-		Application.completion = mEngine.getValue();
+		Application.completion = mEngine.getValue().intern();
 		Application.lsp_host = mHost.getText();
 		Application.lsp_port = Integer.parseInt(mPort.getText());
 		super.onPause();

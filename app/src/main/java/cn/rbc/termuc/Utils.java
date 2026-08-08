@@ -106,17 +106,10 @@ public class Utils {
 	}
 
 	private static class Install
-	implements DialogInterface.OnClickListener, SimpleAdapter.ViewBinder {
+	implements DialogInterface.OnClickListener {
 		Activity mApp;
 		Install(Activity app) {
 			mApp = app;
-		}
-		public boolean setViewValue(View v, Object o, String k) {
-			if (v instanceof ImageView && o instanceof Drawable) {
-				((ImageView)v).setImageDrawable((Drawable)o);
-				return true;
-			}
-			return false;
 		}
 		public void onClick(DialogInterface d, int p) {
 			Activity app = mApp;
@@ -235,5 +228,20 @@ public class Utils {
         it.setAction(Intent.ACTION_VIEW);
         it.setData(Uri.parse(url));
         return it;
+    }
+
+    public static Toast newToast(Context ctx, CharSequence txt, int color) {
+        Toast t = new Toast(ctx);
+        LinearLayout ll = new LinearLayout(ctx);
+        ll.setOrientation(LinearLayout.VERTICAL);
+        TextView tv = new TextView(ctx);
+        tv.setTextColor(0xffffffff);
+        tv.setText(txt);
+        int pd = (int)(12 * HelperUtils.getDpi(ctx) + .5f);
+        ll.setPadding(pd, pd, pd, pd);
+        ll.setBackgroundColor(color);
+        ll.addView(tv);
+        t.setView(ll);
+        return t;
     }
 }

@@ -27,7 +27,7 @@ public class MainActivity extends Activity implements
 ActionBar.OnNavigationListener, OnGlobalLayoutListener,
 AdapterView.OnItemClickListener, AdapterView.OnItemLongClickListener,
 DialogInterface.OnClickListener, MenuItem.OnMenuItemClickListener,
-TextEditor.OnEditedListener, View.OnClickListener, Runnable,
+View.OnClickListener, Runnable,
 HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
 
 	public final static int SETTING = 0, ACCESS_FILE = 1, SHOW_FLOATING = 2, REQ_FOLDER = 3;
@@ -239,7 +239,7 @@ HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
 		PopupMenu pm = new PopupMenu(MainActivity.this, v);
 		Menu _m = pm.getMenu();
 		transStr = adp.getItem(i - 1).name;
-		_m.add(Menu.NONE, R.id.delete, Menu.NONE, cn.rbc.codeeditor.R.string.delete).setOnMenuItemClickListener(this);
+		_m.add(Menu.NONE, R.id.delete, Menu.NONE, R.string.delete).setOnMenuItemClickListener(this);
         _m.add(Menu.NONE, R.id.rename, Menu.NONE, R.string.rename).setOnMenuItemClickListener(this);
 		pm.show();
 		return true;
@@ -425,10 +425,19 @@ HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
     }
 
     int getItemCount() {
-        if (Application.navtab) {
-            return tabs.getChildCount();
-        } else {
-            return getActionBar().getNavigationItemCount();
+        return hda.getCount();
+    }
+
+    void setItemEdited(int idx, boolean edited) {
+        if (hda.getEdit(idx) != edited) {
+            hda.setEdit(idx, edited);
+            if (Application.navtab) {
+                TextView tv = tabs.getChildAt(idx).findViewById(android.R.id.text1);
+                String s = new File(hda.getItem(idx)).getName();
+                tv.setText(edited ? "*".concat(s) : s);
+            } else {
+                hda.notifyDataSetChanged();
+            }
         }
     }
 
@@ -441,7 +450,7 @@ HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
             Application app = Application.getInstance();
             Lsp lsp;
             EditFragment ef = new EditFragment(f, _i);
-			if ("s".equals(Application.completion) && ef.hasLsp() && (lsp=app.lsp).isEnded()) {
+			if ("s" == Application.completion && ef.hasLsp() && (lsp=app.lsp).isEnded()) {
 				lsp.end();
 				lsp.start(this, app.hand);
 				lsp.initialize(Project.rootPath);
@@ -490,7 +499,7 @@ HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
 				lsp.didClose(new File(str));
 			}
 		}
-		boolean s = "s".equals(Application.completion);
+		boolean s = "s" == Application.completion;
 		if (s && lsp.isEnded()) {
 			lsp.start(this, Application.getInstance().hand);
 			lsp.initialize(Project.rootPath);
@@ -622,6 +631,14 @@ HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
     private void closePage(int pos) {
         String file = hda.getItem(pos);
         hda.remove(file);
+        ActionBar bar;
+        int sel;
+        if (!Application.navtab && pos <= (sel=(bar=getActionBar()).getSelectedNavigationIndex()) && sel>0) {
+            boolean byh = byhand;
+            byhand = false;
+            bar.setSelectedNavigationItem(sel-1);
+            byhand = byh;
+        }
         FragmentManager fm = getFragmentManager();
         FragmentTransaction tran = fm.beginTransaction();
         EditFragment frg = (EditFragment) fm.findFragmentByTag(file);
@@ -655,21 +672,6 @@ HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
         }
         subc.setVisibility(View.GONE);
         return false;
-    }
-
-    @Override
-    public void onEdited(boolean edited) {
-        final int idx = getSelectedItem();
-        if (hda.getEdit(idx) != edited) {
-            hda.setEdit(idx, edited);
-            if (Application.navtab) {
-                TextView tv = tabs.getChildAt(idx).findViewById(android.R.id.text1);
-                String s = new File(hda.getItem(idx)).getName();
-                tv.setText(edited ? "*".concat(s) : s);
-            } else {
-                hda.notifyDataSetChanged();
-            }
-        }
     }
 
     @Override
@@ -786,7 +788,7 @@ HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
 		switch (requestCode) {
 			case SETTING:
 				if (resultCode == RESULT_OK) {
-					boolean s = "s".equals(Application.completion);
+					boolean s = "s" == Application.completion;
                     Application app = Application.getInstance();
                     Lsp lsp = app.lsp;
 					boolean chg = s==lsp.isEnded();
@@ -805,7 +807,7 @@ HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
 						TextEditor ed = f.getView();
                         ed.setPureMode(Application.pure_mode);
 						ed.setFormatter(s ? f : null);
-						ed.setAutoComplete("l".equals(Application.completion));
+						ed.setAutoComplete("l" == Application.completion);
 						ed.setTypeface(tf);
 						ed.setWordWrap(Application.wordwrap);
 						ed.setShowNonPrinting(Application.whitespace);
@@ -1002,7 +1004,9 @@ HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
         View tab = LayoutInflater.from(tabScroller.getContext()).inflate(R.layout.tab_item, tabs, false);
         tab.setTag(item);
         tab.setOnClickListener(this);
-        ((TextView)tab.findViewById(android.R.id.text1)).setText(new File(item).getName());
+        String fname = new File(item).getName();
+        if (hda.getEdit(idx)) fname = "*" + fname;
+        ((TextView)tab.findViewById(android.R.id.text1)).setText(fname);
         View closeBtn = tab.findViewById(android.R.id.button1);
         closeBtn.setTag(idx);
         closeBtn.setOnClickListener(this);
@@ -1044,6 +1048,7 @@ HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
     @Override
     public void onClear() {
         if (Application.navtab) {
+            tabs.removeAllViewsInLayout();
             if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
                 tabScroller.setVisibility(View.GONE);
             } else {
@@ -1053,8 +1058,8 @@ HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
             }
         } else {
             ActionBar ab = getActionBar();
-            ab.setNavigationMode(ActionBar.NAVIGATION_MODE_LIST);
-            ab.setDisplayShowTitleEnabled(false);
+            ab.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
+            ab.setDisplayShowTitleEnabled(true);
         }
         msgEmpty.setVisibility(View.VISIBLE);
         showFullMenu(false);

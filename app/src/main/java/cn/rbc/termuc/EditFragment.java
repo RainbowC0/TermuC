@@ -6,6 +6,7 @@ import android.content.res.*;
 import android.os.*;
 import android.util.*;
 import android.view.*;
+import android.view.inputmethod.*;
 import android.widget.*;
 import cn.rbc.codeeditor.common.*;
 import cn.rbc.codeeditor.lang.*;
@@ -19,7 +20,9 @@ import cn.rbc.codeeditor.lang.Formatter;
 import cn.rbc.codeeditor.util.Range;
 
 public class EditFragment extends Fragment
-implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnCaretScrollListener, ActionMode.Callback {
+implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnCaretScrollListener,
+ActionMode.Callback, EditText.OnEditorActionListener, DialogInterface.OnDismissListener,
+TextEditor.OnEditedListener {
 	public final static int
 	TYPE_C = 1,
 	TYPE_CPP = 2,
@@ -38,6 +41,8 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	private long lastModified;
 	private final List<Range> changes = new ArrayList<>();
     static final Set<String> DEFTYPES = new HashSet<>(0);
+    private AlertDialog transD;
+    private TextView transT;
 
 	public EditFragment() {
 	}
@@ -68,7 +73,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         editor.setAutoCaps(Application.auto_caps);
 		editor.setLayoutParams(new ViewGroup.LayoutParams(
 								   ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-        editor.setOnEditedListener(ma);
+        editor.setOnEditedListener(this);
         editor.addCaretListener(this);
         editor.setClipboardCallback(this, ClipboardPanel.CREATE_BEFORE|ClipboardPanel.CREATE_AFTER);
         Document doc = null;
@@ -89,7 +94,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
             ma.setEditor(editor);
             try {
                 doc = load(editor);
-                if ("s".equals(Application.completion))
+                if ("s" == Application.completion)
                     onOpen(doc);
             } catch (IOException fnf) {
                 fnf.printStackTrace();
@@ -97,9 +102,9 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
             }
         }
 		if ((type & TYPE_MASK) != TYPE_TXT) {
-			if (hasLsp() && "s".equals(Application.completion))
+			if (hasLsp() && "s" == Application.completion)
 				editor.setFormatter(this);
-			editor.setAutoComplete("l".equals(Application.completion));
+			editor.setAutoComplete("l" == Application.completion);
 		}
 		lastModified = FileHelper.lastModified(fl);
 		return editor;
@@ -145,13 +150,13 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
     }
 
     @Override
-    public TextEditor getView() {
+    public final TextEditor getView() {
         return (TextEditor) super.getView();
     }
 
     @Override
 	public void updateCaret(int caretIndex) {
-        if (!("s".equals(Application.completion) && hasLsp())) return;
+        if ("s" != Application.completion || !hasLsp()) return;
         // in lsp
         TextEditor ed = getView();
 		Document text = ed.getText();
@@ -198,7 +203,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 	private volatile int mVer = 0;
 
 	public void onChanged(String c, int start, boolean ins, boolean typ) {
-        if (!"s".equals(Application.completion))
+        if ("s" != Application.completion)
             return;
 		TextEditor editor = getView();
         if (editor == null) return;
@@ -238,6 +243,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
             lsp.signatureHelpTry(fl, range.enl, range.enc + 1, c.charAt(0), editor.getSigHelpPanel().isShowing());
 			lsp.completionTry(fl, range.enl, range.enc + 1, c.charAt(0));
         }
+        // TODO: support sematicTokensDelta
         lsp.semanticTokensFull(fl);
 		changes.clear();
 	}
@@ -259,7 +265,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 			bd.setPositiveButton(android.R.string.ok, this);
 			bd.setNegativeButton(android.R.string.cancel, null);
 			bd.create().show();
-		} else if ("s".equals(Application.completion)) {// TODO: delay for throttle
+		} else if ("s" == Application.completion) {// TODO: delay for throttle
             Set<String> typs = Application.getInstance().hand.cacheData.get(fl.toString());
             if (typs == null) typs = DEFTYPES;
             Language lang = Tokenizer.getLanguage();
@@ -280,11 +286,25 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
 
 	@Override
 	public void onClick(DialogInterface diag, int id) {
+        TextEditor ed = getView();
+        if (transD != null) {
+            int pos = ed.getSelectionStart();
+            int l, c;
+            Document doc = ed.getText();
+            if (doc.isWordWrap()) {
+                l = doc.findLineNumber(pos);
+                c = doc.getLineOffset(l);
+            } else {
+                l = doc.findRowNumber(pos);
+                c = doc.getRowOffset(l);
+            }
+            Application.getInstance().lsp.rename(fl, l, pos - c, transT.getText().toString());
+            return;
+        }
 		try {
-            TextEditor ed = getView();
 			Document cs = load(ed);
             ed.mCtrlr.determineSpans();
-            if ("s".equals(Application.completion) && hasLsp()) {
+            if ("s" == Application.completion && hasLsp()) {
 			    Lsp lsp = Application.getInstance().lsp;
                 lsp.didChange(fl, 0, cs.toString());
                 lsp.semanticTokensFull(fl);
@@ -334,7 +354,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         writer.close();
         lastModified = FileHelper.lastModified(fl);
         getView().setEdited(doc.getMarkedVersion() != doc.getCurrentVersion());
-        if ("s".equals(Application.completion) && hasLsp()) {
+        if ("s" == Application.completion && hasLsp()) {
             Application.getInstance().lsp.didSave(fl);
         }
     }
@@ -354,7 +374,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         doc.resetUndos();
         doc.clearSpans();
         doc.analyzeWordWrap();
-		if (hasLsp() && "s".equals(Application.completion)) {
+		if (hasLsp() && "s" == Application.completion) {
 			doc.setOnTextChangeListener(this);
         }
 		return doc;
@@ -410,6 +430,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
             tv.recycle();
         } else {
             menu.findItem(ClipboardPanel.ID_PASTE).setShowAsActionFlags(1);
+            menu.add(0, R.id.rename, 0, R.string.rename).setShowAsActionFlags(1);
             menu.add(0, R.id.goto_, 0, R.string.goto_).setShowAsActionFlags(1);
         }
         return false;
@@ -431,6 +452,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         List<Command> acts = tActs;
         int flag = acts == null ? 2 : 1;
         p2.findItem(R.id.search).setVisible(start != end).setShowAsActionFlags(flag);
+        p2.findItem(R.id.rename).setVisible(start != end && "s" == Application.completion && hasLsp()).setShowAsActionFlags(flag);
         p2.findItem(ClipboardPanel.ID_SELECTALL).setShowAsActionFlags(flag);
         p2.findItem(ClipboardPanel.ID_CUT).setShowAsActionFlags(flag);
         p2.findItem(ClipboardPanel.ID_COPY).setShowAsActionFlags(flag);
@@ -495,7 +517,7 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
         TextEditor ed = getView();
         switch (id) {
             case R.id.goto_:
-                if ("s".equals(Application.completion)) {
+                if ("s" == Application.completion) {
                     int pos = ed.getCaretPosition();
                     Document doc = ed.getText();
                     int line = doc.findLineNumber(pos);
@@ -509,6 +531,31 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
                 MainActivity ma = (MainActivity)getActivity();
                 ma.onOptionsItemSelected(p2);
                 p1.finish();
+                break;
+            case R.id.rename:
+                Context ctx = getContext();
+                TextEditor te = getView();
+                EditText txt = new EditText(ctx);
+                String selTxt = te.getSelectedText();
+                txt.setMinEms(selTxt.length());
+                txt.setText(selTxt);
+                txt.setImeOptions(EditorInfo.IME_ACTION_DONE);
+                txt.setSingleLine(true);
+                txt.setMaxLines(1);
+                txt.setOnEditorActionListener(this);
+                transT = txt;
+                p1.finish();
+                AlertDialog dg = new Builder(getActivity())
+                .setTitle(R.string.rename)
+                .setView(txt)
+                .setPositiveButton(android.R.string.ok,this)
+                .setNegativeButton(android.R.string.cancel,null)
+                .setOnDismissListener(this)
+                .create();
+                transD = dg;
+                dg.show();
+                te.clearFocus();
+                txt.requestFocus();
                 break;
             default:
                 id -= ACTION_BASE_ID;
@@ -525,8 +572,33 @@ implements OnTextChangeListener, DialogInterface.OnClickListener, Formatter, OnC
     }
 
     @Override
-    public void onDestroyActionMode(ActionMode p1)
-    {
+    public void onDestroyActionMode(ActionMode p1) {
         p1.setTag(null);
+    }
+
+    @Override
+    public boolean onEditorAction(TextView p1, int p2, KeyEvent p3) {
+        onClick(null, DialogInterface.BUTTON_POSITIVE);
+        transD.dismiss();
+        return true;
+    }
+
+    @Override
+    public void onDismiss(DialogInterface p1) {
+        transD = null;
+        transT = null;
+    }
+
+    @Override
+    public void onEdited(TextEditor te, boolean edited) {
+        int idx = 0;
+        MainActivity ma = (MainActivity)getActivity();
+        for (; idx<ma.getItemCount(); idx++) {
+            if (ma.getTag(idx).equals(fl.getPath())) {
+                break;
+            }
+        }
+        if (idx == ma.getItemCount()) return;
+        ma.setItemEdited(idx, edited);
     }
 }

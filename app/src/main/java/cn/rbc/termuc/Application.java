@@ -1,8 +1,8 @@
 package cn.rbc.termuc;
 import android.content.*;
 import android.graphics.*;
-import android.preference.*;
 import android.net.*;
+import android.preference.*;
 import android.util.*;
 import cn.rbc.codeeditor.util.*;
 import java.util.*;
@@ -99,7 +99,7 @@ public class Application extends android.app.Application {
         syms = sp.getString(KEY_SYMS, "{}();,.=\"|&![]<>#+-/*?:_");
 		show_hidden = sp.getBoolean(KEY_SHOW_HIDDEN, true);
         cflags = sp.getString(KEY_CFLAGS, "-lm -Wall");
-		completion = sp.getString(KEY_COMPLETION, "s");
+		completion = sp.getString(KEY_COMPLETION, "s").intern();
 		lsp_host = sp.getString(KEY_LSP_HOST, "127.0.0.1");
 		lsp_port = Integer.parseInt(sp.getString(KEY_LSP_PORT, "48455"));
 		String uri = sp.getString(KEY_TERMUX_URI, "");

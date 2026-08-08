@@ -82,6 +82,7 @@ implements Iterable<String>
     @Override
     public void clear() {
         super.clear();
+        bs.clear();
         if (mOnChangedListener!=null) mOnChangedListener.onClear();
     }
 

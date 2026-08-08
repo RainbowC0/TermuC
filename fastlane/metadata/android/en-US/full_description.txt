@@ -21,6 +21,7 @@ To support the full functions as an IDE, please follow the setup instruction.
 ✅ Code action
 ✅ Semantic highlighting
 ✅ Goto definition
+✅ Symbol renaming
 ✅ Compile flags
 ✅ Dark mode
 ✅ Debugging

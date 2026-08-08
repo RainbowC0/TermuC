@@ -14,7 +14,6 @@ import static android.util.JsonToken.*;
 
 import cn.rbc.codeeditor.util.Range;
 import cn.rbc.codeeditor.util.Pair;
-import android.view.*;
 
 public class MainHandler extends Handler {
 	private static final String
@@ -30,6 +29,7 @@ public class MainHandler extends Handler {
 	DG = "diagnostics",
     EDIT = "edit",
 	END = "end",
+    ERR = "error",
     ID = "id",
 	IT = "items",
 	KIND = "kind",
@@ -104,7 +104,13 @@ public class MainHandler extends Handler {
 						String n = jr.nextName();
 						switch (n) {
                             // Assuming we parse the id first than the body
-                            case ID: id = jr.nextInt(); break;
+                            case ID:
+                                id = jr.nextInt();
+                                if (id == Lsp.RENAM && tmp1 instanceof String) {
+                                    HelperUtils.show(Utils.newToast(ma, (String)tmp1, ColorScheme.DIAG[0]&0xf0ffffff));
+                                    return;
+                                }
+                                break;
 							case NEWTX:
 								n = jr.nextString();
 								if (tmp3 instanceof Edit)
@@ -128,6 +134,13 @@ public class MainHandler extends Handler {
                                 n = jr.nextString();
 								if (tmp2 instanceof ErrSpan)
 									((ErrSpan)tmp2).msg = n;
+                                else if (ERR.equals(stack.peek())) {
+                                    if (id == Lsp.RENAM) {
+                                        HelperUtils.show(Utils.newToast(ma, n, ColorScheme.DIAG[0]&0xf0ffffff));
+                                        return;
+                                    }
+                                    tmp1 = n;
+                                }
 								break;
 							case SEVE: {
                                 int i = jr.nextInt();
@@ -233,6 +246,7 @@ public class MainHandler extends Handler {
 							case CAPA:
 							case PARA:
                             case EDIT:
+                            case ERR:
 								jr.beginObject();
 								stack.push(n);
 								break;
@@ -256,7 +270,7 @@ public class MainHandler extends Handler {
                                 break;
                             case CHANGES:
                                 jr.beginObject();
-                                stack.push(n);
+                                stack.push(CHANGES);
                                 tmp2 = null;
                                 break;
                             case DAT:
@@ -275,8 +289,24 @@ public class MainHandler extends Handler {
                                 jr.skipValue();
                                 break;
 							default:
-                                if (CHANGES.equals(stack.peek()) && n.startsWith("file://")) {
-                                    tmp2 = n;
+                                if (CHANGES == stack.peek() && n.startsWith("file://")) {
+                                    n = n.substring(7);
+                                    tmp2 = ma.getFragmentManager().findFragmentByTag(n);
+                                    if (tmp2 == null) {
+                                        Document buf = new Document(null);
+                                        Reader is = new InputStreamReader(FileHelper.openInputStream(new File(n)));
+                                        char[] tmp = new char[2048];
+                                        int l;
+                                        List<Pair> spans = new ArrayList<>();
+                                        spans.add(new Pair(0,0));
+                                        buf.setSpans(spans);
+                                        long ts = System.nanoTime();
+                                        while ((l=is.read(tmp))>0) {
+                                            buf.insert(tmp, buf.length()-1, l, 0, ts, false);
+                                        }
+                                        is.close();
+                                        tmp2 = new android.util.Pair<Document,String>(buf, n);
+                                    }
                                     jr.beginArray();
                                     tmp1 = new ArrayList();
                                     break;
@@ -304,7 +334,7 @@ public class MainHandler extends Handler {
 								tmp2 = new Diagnostic();
 								break;
                             case CHANGES:
-                                tmp3 = new Edit();
+                                tmp3 = new Edit(); // inner uri
                                 break;
 						}
 						}
@@ -366,15 +396,21 @@ public class MainHandler extends Handler {
                                 break;
                             case CHANGES:
                                 if (tmp3 instanceof Edit) {
-                                    if (tmp2 instanceof String) {
+                                    Document tx = null;
+                                    if (tmp2 instanceof EditFragment) { // a uri edit item ended
+                                        tx = ((EditFragment)tmp2).getView().getText();
+                                    } else if (tmp2 instanceof android.util.Pair) {
+                                        tx = ((android.util.Pair<Document,String>)tmp2).first;
+                                    }
+                                    if (tx instanceof Document) {
                                         Edit p = (Edit)tmp3;
-                                        te = ma.getEditor().getText();
-                                        p.start = te.getLineOffset(sl) + sc;
-                                        p.len = te.getLineOffset(el) + ec - p.start;
+                                        p.start = tx.getLineOffset(sl) + sc;
+                                        p.len = tx.getLineOffset(el) + ec - p.start;
                                         ((List)tmp1).add(p);
-                                    } else {
+                                    } else { // all changes ended
                                         lsp.reply(id, "{\"applied\":true}");
                                         jr.close();
+                                        return;
                                     }
                                 }
                                 break;
@@ -429,11 +465,18 @@ public class MainHandler extends Handler {
 								}
 								return;
                             case CHANGES:
-                                if (tmp2 instanceof String) {
-                                    String t = ((String)tmp2).substring(7);
-                                    EditFragment frag = (EditFragment)ma.getFragmentManager().findFragmentByTag(t);
-                                    TextEditor ed = (TextEditor)frag.getView();
+                                if (tmp2 instanceof EditFragment) {
+                                    TextEditor ed = ((EditFragment)tmp2).getView();
                                     applyEdit(ed, (List<Edit>)tmp1);
+                                    tmp2 = null;
+                                } else if (tmp2 instanceof android.util.Pair) {
+                                    if (!((List)tmp1).isEmpty()) {
+                                        android.util.Pair<Document,String> pair = (android.util.Pair<Document,String>)tmp2;
+                                        applyEdit(pair.first, (List<Edit>)tmp1, 0);
+                                        Writer wt = new OutputStreamWriter(FileHelper.openOutputStream(new File(pair.second)));
+                                        wt.write(pair.first.toString());
+                                        wt.close();
+                                    }
                                     tmp2 = null;
                                 }
                                 break;
@@ -448,7 +491,6 @@ public class MainHandler extends Handler {
 			}
 		} catch (Exception j) {
 			Log.e("LSP", j.toString(), j);
-            //j.printStackTrace(pw);
 	    }
 	}
 
@@ -508,9 +550,16 @@ public class MainHandler extends Handler {
 
     private static void applyEdit(TextEditor te, List<Edit> edits) {
         Document doc = te.getText();
+        int mc = te.getCaretPosition();
+        mc = applyEdit(doc, edits, mc);
+        te.setSelection(mc);
+        te.setEdited(doc.getMarkedVersion() != doc.getCurrentVersion());
+        te.mCtrlr.determineSpans();
+   }
+
+   private static int applyEdit(Document doc, List<Edit> edits, int mc) {
         doc.beginBatchEdit();
         long tpl = System.nanoTime();
-        int mc = te.getCaretPosition();
         for (int i = edits.size()-1; i>=0; i--) {
             Edit e = edits.get(i);
             doc.deleteAt(e.start, e.len, tpl);
@@ -521,9 +570,7 @@ public class MainHandler extends Handler {
                 mc = e.start + e.text.length();
         }
         doc.endBatchEdit();
-        te.setSelection(mc);
-        te.setEdited(doc.getMarkedVersion() != doc.getCurrentVersion());
-        te.mCtrlr.determineSpans();
+        return mc;
     }
 
     private Set<String> parseSemTokens(Lsp lsp, JsonReader jr) throws IOException {
@@ -569,6 +616,7 @@ public class MainHandler extends Handler {
         if (uri.startsWith(Utils.PREF) && !uri.startsWith("/home", Utils.PREF.length())) {
             uri = Utils.PREF + "/home/.." + uri.substring(Utils.PREF.length());
         }
+        MainActivity ma = this.ma;
         String curr = ma.getTag(ma.getSelectedItem());
         if (!curr.equals(uri)) {
             ma.openFile(new File(uri));

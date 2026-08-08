@@ -16,4 +16,5 @@
 	<item type="id" name="exstorage"/>
 	<item type="id" name="tmxstorage"/>
     <item type="id" name="goto_"/>
+    <item type="id" name="tabScroller"/>
 </resources>

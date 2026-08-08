@@ -215,7 +215,7 @@ public class TextEditor extends FreeScrollingTextField  {
     public void setEdited(boolean set) {
         isEdited = set;
         if (mEditedListener!=null) {
-            mEditedListener.onEdited(set);
+            mEditedListener.onEdited(this, set);
         }
     }
 
@@ -230,7 +230,7 @@ public class TextEditor extends FreeScrollingTextField  {
     @Override
     public boolean onGenericMotionEvent(MotionEvent ev) {
         int pos;
-        if ("s".equals(Application.completion)
+        if ("s" == Application.completion
             && ev.getActionMasked() == MotionEvent.ACTION_BUTTON_PRESS
             && ev.getButtonState() == MotionEvent.BUTTON_PRIMARY
             && (ev.getMetaState() & KeyEvent.META_CTRL_ON) != 0
@@ -270,7 +270,7 @@ public class TextEditor extends FreeScrollingTextField  {
      writeThread.start();
      }*/
      interface OnEditedListener {
-         void onEdited(boolean edited);
+         void onEdited(TextEditor te, boolean edited);
      }
 
      private static class EditorNavigationMethod extends YoyoNavigationMethod {
@@ -312,19 +312,11 @@ public class TextEditor extends FreeScrollingTextField  {
                  if ((errspan.stl < line || errspan.stl == line && errspan.stc <= end)
                      && (line < errspan.enl || line == errspan.enl && start <= errspan.enc)
                      && errspan.msg != null) {
-                     Context ctx = mTextField.getContext();
-                     Toast t = new Toast(ctx);
-                     LinearLayout ll = new LinearLayout(ctx);
-                     ll.setOrientation(LinearLayout.VERTICAL);
-                     TextView tv = new TextView(ctx);
-                     tv.setTextColor(0xffffffff);
-                     tv.setText(errspan.msg);
-                     int pd = (int)(12 * HelperUtils.getDpi(ctx) + .5f);
-                     ll.setPadding(pd, pd, pd, pd);
-                     ll.setBackgroundColor(ColorScheme.DIAG[errspan.severity] & 0xf0ffffff);
-                     ll.addView(tv);
-                     t.setView(ll);
-                     HelperUtils.show(t);
+                     HelperUtils.show(Utils.newToast(
+                         fld.getContext(),
+                         errspan.msg,
+                         ColorScheme.DIAG[errspan.severity] & 0xf0ffffff
+                     ));
                  }
              }
              return ret;

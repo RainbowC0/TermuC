@@ -19,7 +19,7 @@ public final class Lsp implements Runnable {
 	OPEN = 2, CLOSE = 3,
 	COMPLETION = 4, FIX = 5, CHANGE = 6, SAVE = 7, NOTI = 8, SIGN_HELP = 9,
     FORMAT = 10, HIGHLIGHT = 11, CODEACTION = 12, EXECCMD = 13, SEMTOK = 14,
-    SEMTOKD = 15, DEFIN = 16,
+    SEMTOKD = 15, DEFIN = 16, RENAM = 17,
 	ERROR = -1;
     static enum SemToken {
         NAMESPACE, TYPE, CLASS, ENUM, INTERFACE, STRUCT, TYPEPARAMETER, PARAMETER, VARIABLE, PROPERTY, ENUMMEMBER, EVENT, FUNCTION, METHOD, MACRO, KEYWORD, MODIFIER, COMMENT, STRING, NUMBER, REGEXP, OPERATOR, UNKNOWN
@@ -406,6 +406,20 @@ public final class Lsp implements Runnable {
         sb.append("}}");
         tp = DEFIN;
         mSndr.send("textDocument/definition", sb.toString(), DEFIN);
+    }
+
+    public void rename(File f, int l, int c, String newName) {
+        StringBuilder sb = new StringBuilder("{\"textDocument\":{\"uri\":");
+        sb.append(JSONObject.quote(Uri.fromFile(f).toString()));
+        sb.append("},\"position\":{\"line\":");
+        sb.append(l);
+        sb.append(",\"character\":");
+        sb.append(c);
+        sb.append("},\"newName\":");
+        sb.append(JSONObject.quote(newName));
+        sb.append('}');
+        tp = RENAM;
+        mSndr.send("textDocument/rename", sb.toString(), RENAM);
     }
 
 	public void shutdown() {
