@@ -36,6 +36,7 @@ This app uses `com.termux.RUN_COMMAND` to call Termux to run command, and run `c
 - [x] Code action
 - [x] Semantic highlighting
 - [x] Goto definition
+- [x] Symbol renaming
 - [ ] Workspace
 
 ## Wiki

@@ -239,7 +239,7 @@ HeaderAdapter.OnChangedListener, View.OnLayoutChangeListener {
 		PopupMenu pm = new PopupMenu(MainActivity.this, v);
 		Menu _m = pm.getMenu();
 		transStr = adp.getItem(i - 1).name;
-		_m.add(Menu.NONE, R.id.delete, Menu.NONE, R.string.delete).setOnMenuItemClickListener(this);
+		_m.add(Menu.NONE, R.id.delete, Menu.NONE, cn.rbc.codeeditor.R.string.delete).setOnMenuItemClickListener(this);
         _m.add(Menu.NONE, R.id.rename, Menu.NONE, R.string.rename).setOnMenuItemClickListener(this);
 		pm.show();
 		return true;
